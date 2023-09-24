@@ -22,6 +22,10 @@ class DecisionTreeNode:
     def get_actuals(self) -> str:
         return " ".join(str(tuple(x)) for x in self.actuals)
 
+    @classmethod
+    def reset_id(cls) -> None:
+        cls.tot = 0
+
     __slots__ = ["id", "arr", "cmp_xy", "actuals", "left", "right"]
 
 

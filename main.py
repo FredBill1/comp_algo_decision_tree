@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Optional
 
 import dash_cytoscape as cyto
@@ -50,35 +51,51 @@ class ElementNode:
                 edge["data"]["visibility"] = "hidden"
                 dfs(child)
 
-    def child_hidden(self) -> bool:
+    def update_classes(self) -> None:
+        if self.is_leaf():
+            self.node_data["classes"] = "is_leaf"
+        elif self.has_hidden_child():
+            self.node_data["classes"] = "has_hidden_child"
+        else:
+            self.node_data["classes"] = ""
+
+    def has_hidden_child(self) -> bool:
         return (self.left is not None and self.left.node_data["data"]["visibility"] == "hidden") or (
             self.right is not None and self.right.node_data["data"]["visibility"] == "hidden"
         )
+
+    def is_leaf(self) -> bool:
+        return self.left is None and self.right is None
 
     __slots__ = ["node_data", "left", "left_edge_data", "right", "right_edge_data"]
 
 
 @callback(Output("cytoscape", "elements"), Input("cytoscape", "tapNode"))
-def tapNodeCb(node):
+def tapNodeCb(node: Optional[dict]):
     if node is None:
-        return elements
+        return visible_elements()
 
     element_node = element_nodes[int(node["data"]["id"])]
-    if element_node.child_hidden():
+    if element_node.has_hidden_child():
         element_node.set_child_visible()
     else:
         element_node.set_child_hidden()
 
-    return elements
+    return visible_elements()
 
 
 app = Dash(__name__)
+
+
 elements = []
 element_nodes: dict[int, ElementNode] = {}
 
-if __name__ == "__main__":
-    N = 5
-    root = decision_tree(bubble_sort, N)
+
+def construct_elements(sorting_func: Callable[[list], None], N: int) -> int:
+    DecisionTreeNode.reset_id()
+    elements.clear()
+    element_nodes.clear()
+    root = decision_tree(sorting_func, N)
 
     def dfs(node: DecisionTreeNode, parent: Optional[ElementNode] = None, is_left: bool = False, depth: int = 0) -> None:
         element_nodes[node.id] = element_node = ElementNode(
@@ -120,6 +137,17 @@ if __name__ == "__main__":
                 dfs(child, element_node, is_left, depth + 1)
 
     dfs(root)
+
+
+def visible_elements() -> list[dict]:
+    for element_node in element_nodes.values():
+        element_node.update_classes()
+    return [element for element in elements if element["data"]["visibility"] == "visible"]
+
+
+if __name__ == "__main__":
+    construct_elements(LomutoQS, 5)
+
     app = Dash(__name__)
     app.layout = html.Div(
         [
@@ -128,15 +156,19 @@ if __name__ == "__main__":
                 layout=dict(
                     name="breadthfirst",
                     directed=True,
-                    roots=f"#{root.id}",
+                    roots="#1",
+                    animate=True,
+                    animationDuration=200,
                 ),
-                elements=elements,
+                elements=visible_elements(),
                 style={"height": "100vh", "width": "100vw"},
                 stylesheet=[
-                    {"selector": "edge", "style": {"label": "data(label)", "visibility": "data(visibility)"}},
-                    {"selector": "node", "style": {"label": "data(label)", "visibility": "data(visibility)"}},
+                    {"selector": "edge", "style": {"label": "data(label)"}},
+                    {"selector": "node", "style": {"label": "data(label)"}},
+                    {"selector": ".has_hidden_child", "style": {"background-color": "red", "line-color": "red"}},
+                    {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
                 ],
-                # autoRefreshLayout=True,
+                autoRefreshLayout=True,
             )
         ]
     )
