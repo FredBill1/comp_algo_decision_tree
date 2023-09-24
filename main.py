@@ -209,15 +209,25 @@ if __name__ == "__main__":
                 [
                     dbc.Button("Expand All", id="expand-all"),
                     dbc.Button("Reset", id="reset"),
-                    "Sorting Algorithm:",
-                    dbc.Select(
-                        options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
-                        value="0",
-                        id="sorting-algorithm",
-                        style={"width": "12rem"},
+                    dbc.Row(
+                        [
+                            "Sorting Algorithm:",
+                            dbc.Select(
+                                options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
+                                value="0",
+                                id="sorting-algorithm",
+                                style={"width": "12rem"},
+                            ),
+                        ],
+                        style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
                     ),
-                    f"N({N_RANGE[0]}~{N_RANGE[1]}):",
-                    dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}, value=N),
+                    dbc.Row(
+                        [
+                            f"N({N_RANGE[0]}~{N_RANGE[1]}):",
+                            dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}, value=N),
+                        ],
+                        style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
+                    ),
                     # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
                     dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
                 ],
