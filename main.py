@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Optional
 
 import dash_cytoscape as cyto
-from dash import Dash, Input, Output, callback, html
+from dash import Dash, Input, Output, State, callback, html
 
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import *
@@ -70,27 +70,6 @@ class ElementNode:
     __slots__ = ["node_data", "left", "left_edge_data", "right", "right_edge_data"]
 
 
-@callback(Output("cytoscape", "elements"), Input("cytoscape", "tapNode"))
-def tapNodeCb(node: Optional[dict]):
-    if node is None:
-        return visible_elements()
-
-    element_node = element_nodes[int(node["data"]["id"])]
-    if element_node.has_hidden_child():
-        element_node.set_child_visible()
-    else:
-        element_node.set_child_hidden()
-
-    return visible_elements()
-
-
-app = Dash(__name__)
-
-
-elements = []
-element_nodes: dict[int, ElementNode] = {}
-
-
 def construct_elements(sorting_func: Callable[[list], None], N: int) -> int:
     DecisionTreeNode.reset_id()
     elements.clear()
@@ -145,12 +124,75 @@ def visible_elements() -> list[dict]:
     return [element for element in elements if element["data"]["visibility"] == "visible"]
 
 
+@callback(
+    Output("cytoscape", "elements", allow_duplicate=True),
+    Input("cytoscape", "tapNode"),
+    State("cytoscape", "elements"),
+    prevent_initial_call=True,
+)
+def tapNodeCb(node: Optional[dict], displaying_elements: list[dict]):
+    if node is None:
+        return displaying_elements
+
+    element_node = element_nodes[int(node["data"]["id"])]
+    if element_node.has_hidden_child():
+        element_node.set_child_visible()
+    else:
+        element_node.set_child_hidden()
+
+    return visible_elements()
+
+
+@callback(
+    Output("cytoscape", "elements", allow_duplicate=True),
+    Input("expand-all", "n_clicks"),
+    State("cytoscape", "elements"),
+    prevent_initial_call=True,
+)
+def expandAllCb(n_clicks: int, displaying_elements: list[dict]):
+    if n_clicks == 0:
+        return displaying_elements
+    for node in element_nodes.values():
+        node.node_data["data"]["visibility"] = "visible"
+        if node.left is not None:
+            node.left_edge_data["data"]["visibility"] = "visible"
+        if node.right is not None:
+            node.right_edge_data["data"]["visibility"] = "visible"
+    return visible_elements()
+
+
+@callback(
+    Output("cytoscape", "elements", allow_duplicate=True),
+    Input("reset", "n_clicks"),
+    State("cytoscape", "elements"),
+    prevent_initial_call=True,
+)
+def resetCb(n_clicks: int, displaying_elements: list[dict]):
+    if n_clicks == 0:
+        return displaying_elements
+    element_nodes[1].set_child_hidden()
+    element_nodes[1].set_child_visible()
+    return visible_elements()
+
+
+app = Dash(__name__)
+
+
+elements = []
+element_nodes: dict[int, ElementNode] = {}
+
 if __name__ == "__main__":
     construct_elements(LomutoQS, 5)
 
     app = Dash(__name__)
     app.layout = html.Div(
         [
+            html.Div(
+                [
+                    html.Button("Expand All", id="expand-all"),
+                    html.Button("Reset", id="reset"),
+                ]
+            ),
             cyto.Cytoscape(
                 id="cytoscape",
                 layout=dict(
@@ -161,7 +203,7 @@ if __name__ == "__main__":
                     animationDuration=200,
                 ),
                 elements=visible_elements(),
-                style={"height": "100vh", "width": "100vw"},
+                style={"height": "100%", "width": "100%"},
                 stylesheet=[
                     {"selector": "edge", "style": {"label": "data(label)"}},
                     {"selector": "node", "style": {"label": "data(label)"}},
@@ -169,7 +211,9 @@ if __name__ == "__main__":
                     {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
                 ],
                 autoRefreshLayout=True,
-            )
-        ]
+            ),
+        ],
+        style={"height": "100vh", "width": "100%"},
     )
+
     app.run(debug=True)
