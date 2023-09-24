@@ -16,11 +16,11 @@ class DecisionTreeNode:
         self.left: Optional[DecisionTreeNode] = None
         self.right: Optional[DecisionTreeNode] = None
 
-    def get_name(self) -> str:
-        return "".join(chr(ord("a") + x) for x in self.arr)
+    def get_arr(self) -> str:
+        return "(" + ", ".join(chr(ord("a") + x) for x in self.arr) + ")"
 
     def get_actuals(self) -> str:
-        return "\n".join(str(tuple(x)) for x in self.actuals)
+        return " ".join(str(tuple(x)) for x in self.actuals)
 
     __slots__ = ["id", "arr", "cmp_xy", "actuals", "left", "right"]
 
@@ -92,7 +92,7 @@ def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
 
     if node.left is not None:
         print_tree(node.left, level + 1, f"[{x}<{y}]")
-    print("\n" + " " * (level * 8) + f"-{op}->", node.get_name(), node.actuals, "\n")
+    print("\n" + " " * (level * 8) + f"-{op}->", node.get_arr(), node.actuals, "\n")
     if node.right is not None:
         print_tree(node.right, level + 1, f"[{x}>{y}]")
 
@@ -103,7 +103,7 @@ def visualize_tree(node: DecisionTreeNode, name: str = "decision_tree"):
     dot = Digraph(graph_attr={"overlap": "false"})
 
     def dfs(node: DecisionTreeNode):
-        dot.node(str(node.id), node.get_name(), xlabel=node.get_actuals())
+        dot.node(str(node.id), node.get_arr(), xlabel=node.get_actuals())
         if node.cmp_xy is None:
             return
         x, y = [chr(ord("a") + x) for x in node.cmp_xy]
@@ -117,91 +117,12 @@ def visualize_tree(node: DecisionTreeNode, name: str = "decision_tree"):
 
 
 if __name__ == "__main__":
+    from sorting_algorithms import *
 
-    def bubble_sort(arr: list) -> None:
-        for i in range(len(arr) - 1):
-            for j in range(i + 1, len(arr)):
-                if arr[i] > arr[j]:
-                    arr[i], arr[j] = arr[j], arr[i]
-
-    def quick_sort(arr: list) -> None:
-        def impl(arr: list, l: int, r: int):
-            if l >= r:
-                return
-
-            pivot = arr[l]
-            L, R = l, r
-            while l < r:
-                while l < r and arr[r] >= pivot:
-                    r -= 1
-                if l < r:
-                    arr[l] = arr[r]
-                while l < r and arr[l] < pivot:
-                    l += 1
-                if l < r:
-                    arr[r] = arr[l]
-            if l != L:
-                arr[l] = pivot
-
-            impl(arr, L, l - 1)
-            impl(arr, l + 1, R)
-
-        impl(arr, 0, len(arr) - 1)
-
-    def LomutoQS(L: list) -> None:
-        def Lomuto_partition(L: list, lo: int, hi: int) -> int:
-            pivot = L[hi]
-            i = lo
-            for j in range(lo, hi):
-                if L[j] <= pivot:
-                    L[i], L[j] = L[j], L[i]
-                    i += 1
-            L[i], L[hi] = L[hi], L[i]
-            return i
-
-        def impl(L: list, lo: int, hi: int) -> None:
-            if lo < hi:
-                p = Lomuto_partition(L, lo, hi)
-                impl(L, lo, p - 1)
-                impl(L, p + 1, hi)
-
-        impl(L, 0, len(L) - 1)
-
-    def merge_sort(arr: list) -> None:
-        def merge(arr: list, l: int, m: int, r: int) -> None:
-            L = arr[l : m + 1]
-            R = arr[m + 1 : r + 1]
-            i = j = 0
-            k = l
-            while i < len(L) and j < len(R):
-                if L[i] <= R[j]:
-                    arr[k] = L[i]
-                    i += 1
-                else:
-                    arr[k] = R[j]
-                    j += 1
-                k += 1
-            while i < len(L):
-                arr[k] = L[i]
-                i += 1
-                k += 1
-            while j < len(R):
-                arr[k] = R[j]
-                j += 1
-                k += 1
-
-        def impl(arr: list, l: int, r: int) -> None:
-            if l < r:
-                m = (l + r) // 2
-                impl(arr, l, m)
-                impl(arr, m + 1, r)
-                merge(arr, l, m, r)
-
-        impl(arr, 0, len(arr) - 1)
-
-    tree = decision_tree(bubble_sort, 3)
-    # tree = decision_tree(quick_sort, 3)
-    # tree = decision_tree(LomutoQS, 3)
-    # tree = decision_tree(merge_sort, 3)
+    N = 3
+    tree = decision_tree(bubble_sort, N)
+    # tree = decision_tree(quick_sort, N)
+    # tree = decision_tree(LomutoQS, N)
+    # tree = decision_tree(merge_sort, N)
     print_tree(tree)
     visualize_tree(tree)
