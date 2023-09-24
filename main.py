@@ -242,7 +242,7 @@ if __name__ == "__main__":
                 autoRefreshLayout=True,
             ),
         ],
-        style={"height": "95vh", "width": "100%"},
+        style={"height": "90vh", "width": "98vw", "margin": "auto"},
     )
 
     app.run()
