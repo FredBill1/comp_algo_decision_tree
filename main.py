@@ -238,6 +238,7 @@ if __name__ == "__main__":
                     {"selector": "node", "style": {"label": "data(croped_label)"}},
                     {"selector": ".has_hidden_child", "style": {"background-color": "red", "line-color": "red"}},
                     {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
+                    {"selector": "label", "style": {"color": "#0095FF"}},
                 ],
                 autoRefreshLayout=True,
             ),
