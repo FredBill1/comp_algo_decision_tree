@@ -181,10 +181,10 @@ def reconstructCb(input_sorting_algorithm_i: Optional[str], input_N: Optional[st
     State("cytoscape", "stylesheet"),
     prevent_initial_call=True,
 )
-def showFullLabelsCb(show_actuals: bool, stylesheet: list[dict]):
+def showFullLabelsCb(show_full_labels: list, stylesheet: list[dict]):
     for rule in stylesheet:
         if rule["selector"] == "node":
-            rule["style"]["label"] = "data(full_label)" if show_actuals else "data(croped_label)"
+            rule["style"]["label"] = "data(full_label)" if len(show_full_labels) else "data(croped_label)"
             break
     return stylesheet
 
@@ -209,18 +209,19 @@ if __name__ == "__main__":
                 [
                     dbc.Button("Expand All", id="expand-all"),
                     dbc.Button("Reset", id="reset"),
-                    "  Sorting Algorithm:",
+                    "Sorting Algorithm:",
                     dbc.Select(
                         options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
                         value="0",
                         id="sorting-algorithm",
                         style={"width": "12rem"},
                     ),
-                    f"  N({N_RANGE[0]}~{N_RANGE[1]}):",
+                    f"N({N_RANGE[0]}~{N_RANGE[1]}):",
                     dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}, value=N),
-                    dbc.Switch(label="Show Full Labels", id="show-full-labels", value=False),
+                    # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
+                    dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
                 ],
-                style={"column-gap": "1rem", "display": "flex", "align-items": "center", "justify-content": "center", "margin": "1rem"},
+                style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
             ),
             cyto.Cytoscape(
                 id="cytoscape",
