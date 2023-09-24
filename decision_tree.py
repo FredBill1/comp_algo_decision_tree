@@ -167,8 +167,41 @@ if __name__ == "__main__":
 
         impl(L, 0, len(L) - 1)
 
+    def merge_sort(arr: list) -> None:
+        def merge(arr: list, l: int, m: int, r: int) -> None:
+            L = arr[l : m + 1]
+            R = arr[m + 1 : r + 1]
+            i = j = 0
+            k = l
+            while i < len(L) and j < len(R):
+                if L[i] <= R[j]:
+                    arr[k] = L[i]
+                    i += 1
+                else:
+                    arr[k] = R[j]
+                    j += 1
+                k += 1
+            while i < len(L):
+                arr[k] = L[i]
+                i += 1
+                k += 1
+            while j < len(R):
+                arr[k] = R[j]
+                j += 1
+                k += 1
+
+        def impl(arr: list, l: int, r: int) -> None:
+            if l < r:
+                m = (l + r) // 2
+                impl(arr, l, m)
+                impl(arr, m + 1, r)
+                merge(arr, l, m, r)
+
+        impl(arr, 0, len(arr) - 1)
+
     tree = decision_tree(bubble_sort, 3)
     # tree = decision_tree(quick_sort, 3)
     # tree = decision_tree(LomutoQS, 3)
+    # tree = decision_tree(merge_sort, 3)
     print_tree(tree)
     visualize_tree(tree)
