@@ -1,13 +1,15 @@
 from collections.abc import Callable
 from typing import Optional
 
+import dash_bootstrap_components as dbc
 import dash_cytoscape as cyto
-from dash import Dash, Input, Output, callback, html
+from dash import Dash, Input, Output, State, callback, html
 
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import *
 
-DISPLAY_DEPTH = 5
+DISPLAY_DEPTH = 4
+LABEL_MAX_LENGTH = 50
 
 
 class ElementNode:
@@ -17,6 +19,7 @@ class ElementNode:
         self.left_edge_data: Optional[dict] = None
         self.right: Optional[ElementNode] = None
         self.right_edge_data: Optional[dict] = None
+        self.crop_label()
 
     def set_child_visible(self) -> None:
         def dfs(node: ElementNode, depth: int) -> None:
@@ -59,6 +62,13 @@ class ElementNode:
         else:
             self.node_data["classes"] = ""
 
+    def crop_label(self) -> None:
+        label = self.node_data["data"]["full_label"]
+        if len(label) > LABEL_MAX_LENGTH:
+            self.node_data["data"]["croped_label"] = label[: LABEL_MAX_LENGTH - 3] + "..."
+        else:
+            self.node_data["data"]["croped_label"] = label
+
     def has_hidden_child(self) -> bool:
         return (self.left is not None and self.left.node_data["data"]["visibility"] == "hidden") or (
             self.right is not None and self.right.node_data["data"]["visibility"] == "hidden"
@@ -82,8 +92,8 @@ def construct_elements(sorting_func: Callable[[list], None], N: int) -> int:
                 "data": {
                     "id": str(node.id),
                     "visibility": "visible" if depth < DISPLAY_DEPTH else "hidden",
-                    "label": node.get_arr(),
-                    "xlabel": node.get_actuals(),
+                    "arr": node.get_arr(),
+                    "full_label": node.get_arr() + " " + node.get_actuals(),
                 }
             },
         )
@@ -105,7 +115,7 @@ def construct_elements(sorting_func: Callable[[list], None], N: int) -> int:
                         "source": str(node.id),
                         "target": str(child.id),
                         "visibility": "visible" if depth < DISPLAY_DEPTH - 1 else "hidden",
-                        "label": f"{x}{op}{y}",
+                        "cmp_op": f"{x}{op}{y}",
                     }
                 }
                 elements.append(edge_data)
@@ -153,7 +163,21 @@ def resetCb(_: int):
     return visible_elements()
 
 
-app = Dash(__name__)
+@callback(
+    Output("cytoscape", "stylesheet", allow_duplicate=True),
+    Input("show-full-labels", "value"),
+    State("cytoscape", "stylesheet"),
+    prevent_initial_call=True,
+)
+def showFullLabelsCb(show_actuals: bool, stylesheet: list[dict]):
+    for rule in stylesheet:
+        if rule["selector"] == "node":
+            rule["style"]["label"] = "data(full_label)" if show_actuals else "data(croped_label)"
+            break
+    return stylesheet
+
+
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 
 elements = []
@@ -162,14 +186,15 @@ element_nodes: dict[int, ElementNode] = {}
 if __name__ == "__main__":
     construct_elements(LomutoQS, 5)
 
-    app = Dash(__name__)
     app.layout = html.Div(
         [
             html.Div(
                 [
-                    html.Button("Expand All", id="expand-all"),
-                    html.Button("Reset", id="reset"),
-                ]
+                    dbc.Button("Expand All", id="expand-all"),
+                    dbc.Button("Reset", id="reset"),
+                    dbc.Switch(label="Show Full Labels", id="show-full-labels", value=False),
+                ],
+                style={"column-gap": "1rem", "display": "flex", "align-items": "center", "justify-content": "center", "margin": "1rem"},
             ),
             cyto.Cytoscape(
                 id="cytoscape",
@@ -183,15 +208,15 @@ if __name__ == "__main__":
                 elements=visible_elements(),
                 style={"height": "100%", "width": "100%"},
                 stylesheet=[
-                    {"selector": "edge", "style": {"label": "data(label)"}},
-                    {"selector": "node", "style": {"label": "data(label)"}},
+                    {"selector": "edge", "style": {"label": "data(cmp_op)"}},
+                    {"selector": "node", "style": {"label": "data(croped_label)"}},
                     {"selector": ".has_hidden_child", "style": {"background-color": "red", "line-color": "red"}},
                     {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
                 ],
                 autoRefreshLayout=True,
             ),
         ],
-        style={"height": "100vh", "width": "100%"},
+        style={"height": "95vh", "width": "100%"},
     )
 
     app.run(debug=True)

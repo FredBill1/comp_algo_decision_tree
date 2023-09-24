@@ -17,10 +17,10 @@ class DecisionTreeNode:
         self.right: Optional[DecisionTreeNode] = None
 
     def get_arr(self) -> str:
-        return "(" + ", ".join(chr(ord("a") + x) for x in self.arr) + ")"
+        return "(" + ",".join(chr(ord("a") + x) for x in self.arr) + ")"
 
     def get_actuals(self) -> str:
-        return " ".join(str(tuple(x)) for x in self.actuals)
+        return " ".join("(" + ",".join(map(str, x)) + ")" for x in self.actuals)
 
     @classmethod
     def reset_id(cls) -> None:
