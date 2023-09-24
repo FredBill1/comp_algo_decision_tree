@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Optional
 
 import dash_cytoscape as cyto
-from dash import Dash, Input, Output, State, callback, html
+from dash import Dash, Input, Output, callback, html
 
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import *
@@ -124,16 +124,8 @@ def visible_elements() -> list[dict]:
     return [element for element in elements if element["data"]["visibility"] == "visible"]
 
 
-@callback(
-    Output("cytoscape", "elements", allow_duplicate=True),
-    Input("cytoscape", "tapNode"),
-    State("cytoscape", "elements"),
-    prevent_initial_call=True,
-)
-def tapNodeCb(node: Optional[dict], displaying_elements: list[dict]):
-    if node is None:
-        return displaying_elements
-
+@callback(Output("cytoscape", "elements", allow_duplicate=True), Input("cytoscape", "tapNode"), prevent_initial_call=True)
+def tapNodeCb(node: Optional[dict]):
     element_node = element_nodes[int(node["data"]["id"])]
     if element_node.has_hidden_child():
         element_node.set_child_visible()
@@ -143,15 +135,8 @@ def tapNodeCb(node: Optional[dict], displaying_elements: list[dict]):
     return visible_elements()
 
 
-@callback(
-    Output("cytoscape", "elements", allow_duplicate=True),
-    Input("expand-all", "n_clicks"),
-    State("cytoscape", "elements"),
-    prevent_initial_call=True,
-)
-def expandAllCb(n_clicks: int, displaying_elements: list[dict]):
-    if n_clicks == 0:
-        return displaying_elements
+@callback(Output("cytoscape", "elements", allow_duplicate=True), Input("expand-all", "n_clicks"), prevent_initial_call=True)
+def expandAllCb(_: int):
     for node in element_nodes.values():
         node.node_data["data"]["visibility"] = "visible"
         if node.left is not None:
@@ -161,15 +146,8 @@ def expandAllCb(n_clicks: int, displaying_elements: list[dict]):
     return visible_elements()
 
 
-@callback(
-    Output("cytoscape", "elements", allow_duplicate=True),
-    Input("reset", "n_clicks"),
-    State("cytoscape", "elements"),
-    prevent_initial_call=True,
-)
-def resetCb(n_clicks: int, displaying_elements: list[dict]):
-    if n_clicks == 0:
-        return displaying_elements
+@callback(Output("cytoscape", "elements", allow_duplicate=True), Input("reset", "n_clicks"), prevent_initial_call=True)
+def resetCb(_: int):
     element_nodes[1].set_child_hidden()
     element_nodes[1].set_child_visible()
     return visible_elements()
