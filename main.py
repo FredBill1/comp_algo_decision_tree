@@ -163,6 +163,12 @@ def resetCb(_: int):
     return visible_elements()
 
 
+@callback(Output("cytoscape", "elements", allow_duplicate=True), Input("sorting-algorithm", "value"), prevent_initial_call=True)
+def sortingAlgorithmCb(value: int):
+    construct_elements(sorting_algorithms[int(value)][1], 5)
+    return visible_elements()
+
+
 @callback(
     Output("cytoscape", "stylesheet", allow_duplicate=True),
     Input("show-full-labels", "value"),
@@ -184,7 +190,7 @@ elements = []
 element_nodes: dict[int, ElementNode] = {}
 
 if __name__ == "__main__":
-    construct_elements(LomutoQS, 5)
+    construct_elements(sorting_algorithms[0][1], 5)
 
     app.layout = html.Div(
         [
@@ -192,6 +198,12 @@ if __name__ == "__main__":
                 [
                     dbc.Button("Expand All", id="expand-all"),
                     dbc.Button("Reset", id="reset"),
+                    dbc.Select(
+                        options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
+                        value={"label": sorting_algorithms[0][0], "value": 0},
+                        id="sorting-algorithm",
+                        style={"width": "12rem"},
+                    ),
                     dbc.Switch(label="Show Full Labels", id="show-full-labels", value=False),
                 ],
                 style={"column-gap": "1rem", "display": "flex", "align-items": "center", "justify-content": "center", "margin": "1rem"},

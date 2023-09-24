@@ -81,3 +81,11 @@ def merge_sort(arr: list) -> None:
             merge(arr, l, m, r)
 
     impl(arr, 0, len(arr) - 1)
+
+
+sorting_algorithms = [
+    ("bubble sort", bubble_sort),
+    ("quick sort", quick_sort),
+    ("Lomuto quick sort", LomutoQS),
+    ("merge sort", merge_sort),
+]
