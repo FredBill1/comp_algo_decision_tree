@@ -8,9 +8,6 @@ from dash import Dash, Input, Output, State, callback, html
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import *
 
-DISPLAY_DEPTH = 4
-LABEL_MAX_LENGTH = 50
-
 
 class ElementNode:
     def __init__(self, node_data: dict) -> None:
@@ -92,7 +89,6 @@ def construct_elements(sorting_func: Callable[[list], None], N: int) -> int:
                 "data": {
                     "id": str(node.id),
                     "visibility": "visible" if depth < DISPLAY_DEPTH else "hidden",
-                    "arr": node.get_arr(),
                     "full_label": node.get_arr() + " " + node.get_actuals(),
                 }
             },
@@ -163,9 +159,19 @@ def resetCb(_: int):
     return visible_elements()
 
 
-@callback(Output("cytoscape", "elements", allow_duplicate=True), Input("sorting-algorithm", "value"), prevent_initial_call=True)
-def sortingAlgorithmCb(value: int):
-    construct_elements(sorting_algorithms[int(value)][1], 5)
+@callback(
+    Output("cytoscape", "elements", allow_duplicate=True),
+    Input("sorting-algorithm", "value"),
+    Input("input-N", "value"),
+    prevent_initial_call=True,
+)
+def reconstructCb(input_sorting_algorithm_i: Optional[str], input_N: Optional[str]):
+    global sorting_algorithm_i, N
+    if input_sorting_algorithm_i is not None:
+        sorting_algorithm_i = int(input_sorting_algorithm_i)
+    if input_N is not None:
+        N = int(input_N)
+    construct_elements(sorting_algorithms[sorting_algorithm_i][1], N)
     return visible_elements()
 
 
@@ -183,14 +189,19 @@ def showFullLabelsCb(show_actuals: bool, stylesheet: list[dict]):
     return stylesheet
 
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-
+DISPLAY_DEPTH = 4
+LABEL_MAX_LENGTH = 50
+N = 3
+N_RANGE = (1, 8)
+sorting_algorithm_i = 0
 
 elements = []
 element_nodes: dict[int, ElementNode] = {}
 
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
 if __name__ == "__main__":
-    construct_elements(sorting_algorithms[0][1], 5)
+    construct_elements(sorting_algorithms[sorting_algorithm_i][1], N)
 
     app.layout = html.Div(
         [
@@ -198,12 +209,15 @@ if __name__ == "__main__":
                 [
                     dbc.Button("Expand All", id="expand-all"),
                     dbc.Button("Reset", id="reset"),
+                    "  Sorting Algorithm:",
                     dbc.Select(
                         options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
-                        value={"label": sorting_algorithms[0][0], "value": 0},
+                        value="0",
                         id="sorting-algorithm",
                         style={"width": "12rem"},
                     ),
+                    f"  N({N_RANGE[0]}~{N_RANGE[1]}):",
+                    dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}, value=N),
                     dbc.Switch(label="Show Full Labels", id="show-full-labels", value=False),
                 ],
                 style={"column-gap": "1rem", "display": "flex", "align-items": "center", "justify-content": "center", "margin": "1rem"},
@@ -231,4 +245,4 @@ if __name__ == "__main__":
         style={"height": "95vh", "width": "100%"},
     )
 
-    app.run(debug=True)
+    app.run()
