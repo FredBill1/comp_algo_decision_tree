@@ -259,7 +259,16 @@ sorting_algorithm_i = 0
 current_elements: Optional[Elements] = None
 
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    meta_tags=[
+        {
+            "name": "viewport",
+            "content": "user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi",
+        }
+    ],
+)
 
 if __name__ == "__main__":
     current_elements = Elements.get(sorting_algorithm_i, N)
