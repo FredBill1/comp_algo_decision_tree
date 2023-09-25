@@ -5,6 +5,16 @@ def bubble_sort(arr: list) -> None:
                 arr[j], arr[j + 1] = arr[j + 1], arr[j]
 
 
+def selection_sort(arr: list) -> None:
+    for i in range(len(arr) - 1):
+        k = i
+        for j in range(i + 1, len(arr)):
+            if arr[k] > arr[j]:
+                k = j
+        if k != i:
+            arr[k], arr[i] = arr[i], arr[k]
+
+
 def insertion_sort(arr: list) -> None:
     for i in range(1, len(arr)):
         j = i
@@ -13,9 +23,9 @@ def insertion_sort(arr: list) -> None:
             j -= 1
 
 
-def quick_sort(arr: list) -> None:
+def hoare_quick_sort(arr: list) -> None:
     def partition(L: list, low: int, high: int) -> int:
-        pivot = L[low]
+        pivot = L[(high - low) // 2 + low]
         i = low - 1
         j = high + 1
         while True:
@@ -38,7 +48,7 @@ def quick_sort(arr: list) -> None:
     impl(arr, 0, len(arr) - 1)
 
 
-def LomutoQS(arr: list) -> None:
+def Lomuto_quick_sort(arr: list) -> None:
     def Lomuto_partition(L: list, lo: int, hi: int) -> int:
         pivot = L[hi]
         i = lo
@@ -114,8 +124,9 @@ def merge_sort(arr: list) -> None:
 sorting_algorithms = [
     ("bubble sort", bubble_sort),
     ("insertion sort", insertion_sort),
-    ("quick sort", quick_sort),
-    ("Lomuto quick sort", LomutoQS),
+    ("selection sort", selection_sort),
+    ("Hoare quick sort", hoare_quick_sort),
+    ("Lomuto quick sort", Lomuto_quick_sort),
     ("heap sort", heap_sort),
     ("merge sort", merge_sort),
 ]
