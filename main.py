@@ -3,7 +3,7 @@ from typing import Optional
 
 import dash_bootstrap_components as dbc
 import dash_cytoscape as cyto
-from dash import Dash, Input, Output, State, callback, html
+from dash import Dash, Input, Output, State, callback, dcc, html
 
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import *
@@ -171,6 +171,7 @@ def resetCb(_: int):
 
 @callback(
     Output("cytoscape", "elements", allow_duplicate=True),
+    Output("control-loading-output", "children"),
     Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
     prevent_initial_call=True,
@@ -182,7 +183,7 @@ def reconstructCb(input_sorting_algorithm_i: Optional[str], input_N: Optional[st
     if input_N is not None:
         N = int(input_N)
     current_elements = Elements.get(sorting_algorithm_i, N)
-    return current_elements.visible_elements()
+    return [current_elements.visible_elements(), ""]
 
 
 @callback(
@@ -240,6 +241,7 @@ if __name__ == "__main__":
                     ),
                     # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
                     dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
+                    dcc.Loading(id="control-loading", type="default", children=html.Div(id="control-loading-output")),
                 ],
                 style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
             ),
