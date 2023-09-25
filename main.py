@@ -77,86 +77,96 @@ class ElementNode:
     __slots__ = ["node_data", "left", "left_edge_data", "right", "right_edge_data"]
 
 
-def construct_elements(sorting_func: Callable[[list], None], N: int) -> int:
-    DecisionTreeNode.reset_id()
-    elements.clear()
-    element_nodes.clear()
-    root = decision_tree(sorting_func, N)
+class Elements:
+    cached: dict[tuple[int, int], "Elements"] = {}
 
-    def dfs(node: DecisionTreeNode, parent: Optional[ElementNode] = None, is_left: bool = False, depth: int = 0) -> None:
-        element_nodes[node.id] = element_node = ElementNode(
-            {
-                "data": {
-                    "id": str(node.id),
-                    "visibility": "visible" if depth < DISPLAY_DEPTH else "hidden",
-                    "full_label": node.get_arr() + " " + node.get_actuals(),
-                }
-            },
-        )
-        if parent is not None:
-            if is_left:
-                parent.left = element_node
-            else:
-                parent.right = element_node
-        elements.append(element_node.node_data)
+    def __init__(self, sorting_func: Callable[[list], None], N: int) -> None:
+        DecisionTreeNode.reset_id()
+        self.elements: list[dict] = []
+        self.element_nodes: dict[int, ElementNode] = {}
 
-        if node.cmp_xy is None:
-            return
-        x, y = [chr(ord("a") + x) for x in node.cmp_xy]
-        for op, child in zip("<>", [node.left, node.right]):
-            if child is not None:
-                is_left = op == "<"
-                edge_data = {
+        root = decision_tree(sorting_func, N)
+
+        def dfs(node: DecisionTreeNode, parent: Optional[ElementNode] = None, is_left: bool = False, depth: int = 0) -> None:
+            self.element_nodes[node.id] = element_node = ElementNode(
+                {
                     "data": {
-                        "source": str(node.id),
-                        "target": str(child.id),
-                        "visibility": "visible" if depth < DISPLAY_DEPTH - 1 else "hidden",
-                        "cmp_op": f"{x}{op}{y}",
+                        "id": str(node.id),
+                        "visibility": "visible" if depth < DISPLAY_DEPTH else "hidden",
+                        "full_label": node.get_arr() + " " + node.get_actuals(),
                     }
-                }
-                elements.append(edge_data)
+                },
+            )
+            if parent is not None:
                 if is_left:
-                    element_node.left_edge_data = edge_data
+                    parent.left = element_node
                 else:
-                    element_node.right_edge_data = edge_data
-                dfs(child, element_node, is_left, depth + 1)
+                    parent.right = element_node
+            self.elements.append(element_node.node_data)
 
-    dfs(root)
+            if node.cmp_xy is None:
+                return
+            x, y = [chr(ord("a") + x) for x in node.cmp_xy]
+            for op, child in zip("<>", [node.left, node.right]):
+                if child is not None:
+                    is_left = op == "<"
+                    edge_data = {
+                        "data": {
+                            "source": str(node.id),
+                            "target": str(child.id),
+                            "visibility": "visible" if depth < DISPLAY_DEPTH - 1 else "hidden",
+                            "cmp_op": f"{x}{op}{y}",
+                        }
+                    }
+                    self.elements.append(edge_data)
+                    if is_left:
+                        element_node.left_edge_data = edge_data
+                    else:
+                        element_node.right_edge_data = edge_data
+                    dfs(child, element_node, is_left, depth + 1)
 
+        dfs(root)
 
-def visible_elements() -> list[dict]:
-    for element_node in element_nodes.values():
-        element_node.update_classes()
-    return [element for element in elements if element["data"]["visibility"] == "visible"]
+    @classmethod
+    def get(cls, sorting_algorithm_i: int, N: int) -> "Elements":
+        key = (sorting_algorithm_i, N)
+        if key not in cls.cached:
+            cls.cached[key] = cls(sorting_algorithms[sorting_algorithm_i][1], N)
+        return cls.cached[key]
+
+    def visible_elements(self) -> list[dict]:
+        for element_node in self.element_nodes.values():
+            element_node.update_classes()
+        return [element for element in self.elements if element["data"]["visibility"] == "visible"]
 
 
 @callback(Output("cytoscape", "elements", allow_duplicate=True), Input("cytoscape", "tapNode"), prevent_initial_call=True)
 def tapNodeCb(node: Optional[dict]):
-    element_node = element_nodes[int(node["data"]["id"])]
+    element_node = current_elements.element_nodes[int(node["data"]["id"])]
     if element_node.has_hidden_child():
         element_node.set_child_visible()
     else:
         element_node.set_child_hidden()
 
-    return visible_elements()
+    return current_elements.visible_elements()
 
 
 @callback(Output("cytoscape", "elements", allow_duplicate=True), Input("expand-all", "n_clicks"), prevent_initial_call=True)
 def expandAllCb(_: int):
-    for node in element_nodes.values():
+    for node in current_elements.element_nodes.values():
         node.node_data["data"]["visibility"] = "visible"
         if node.left is not None:
             node.left_edge_data["data"]["visibility"] = "visible"
         if node.right is not None:
             node.right_edge_data["data"]["visibility"] = "visible"
-    return visible_elements()
+    return current_elements.visible_elements()
 
 
 @callback(Output("cytoscape", "elements", allow_duplicate=True), Input("reset", "n_clicks"), prevent_initial_call=True)
 def resetCb(_: int):
-    element_nodes[1].set_child_hidden()
-    element_nodes[1].set_child_visible()
-    return visible_elements()
+    current_elements.element_nodes[1].set_child_hidden()
+    current_elements.element_nodes[1].set_child_visible()
+    return current_elements.visible_elements()
 
 
 @callback(
@@ -166,13 +176,13 @@ def resetCb(_: int):
     prevent_initial_call=True,
 )
 def reconstructCb(input_sorting_algorithm_i: Optional[str], input_N: Optional[str]):
-    global sorting_algorithm_i, N
+    global sorting_algorithm_i, N, current_elements
     if input_sorting_algorithm_i is not None:
         sorting_algorithm_i = int(input_sorting_algorithm_i)
     if input_N is not None:
         N = int(input_N)
-    construct_elements(sorting_algorithms[sorting_algorithm_i][1], N)
-    return visible_elements()
+    current_elements = Elements.get(sorting_algorithm_i, N)
+    return current_elements.visible_elements()
 
 
 @callback(
@@ -195,13 +205,13 @@ N = 3
 N_RANGE = (1, 8)
 sorting_algorithm_i = 0
 
-elements = []
-element_nodes: dict[int, ElementNode] = {}
+current_elements: Optional[Elements] = None
+
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 if __name__ == "__main__":
-    construct_elements(sorting_algorithms[sorting_algorithm_i][1], N)
+    current_elements = Elements.get(sorting_algorithm_i, N)
 
     app.layout = html.Div(
         [
@@ -242,7 +252,7 @@ if __name__ == "__main__":
                     animate=True,
                     animationDuration=200,
                 ),
-                elements=visible_elements(),
+                elements=current_elements.visible_elements(),
                 style={"height": "100%", "width": "100%"},
                 stylesheet=[
                     {"selector": "edge", "style": {"label": "data(cmp_op)"}},
