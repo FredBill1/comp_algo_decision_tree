@@ -1,9 +1,12 @@
+from collections import deque
 from collections.abc import Callable
 from typing import Optional
 
 import dash_bootstrap_components as dbc
 import dash_cytoscape as cyto
+import dash_mantine_components as dmc
 from dash import Dash, Input, Output, State, callback, dcc, html
+from dash_iconify import DashIconify
 
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import *
@@ -160,17 +163,35 @@ def tapNodeCb(node: Optional[dict]):
 @callback(
     Output("cytoscape", "elements", allow_duplicate=True),
     Output("control-loading-output", "children", allow_duplicate=True),
+    Output("notifications-container", "children", allow_duplicate=True),
     Input("expand-all", "n_clicks"),
     prevent_initial_call=True,
 )
 def expandAllCb(_: int):
-    for node in current_elements.element_nodes.values():
+    tot = 1
+
+    queue = deque([current_elements.element_nodes[1]])
+    while queue:
+        node = queue.popleft()
         node.node_data["data"]["visibility"] = "visible"
-        if node.left is not None:
+        tot += 1
+        if tot < MAX_ELEMENTS and node.left is not None:
             node.left_edge_data["data"]["visibility"] = "visible"
-        if node.right is not None:
+            queue.append(node.left)
+        if tot < MAX_ELEMENTS and node.right is not None:
             node.right_edge_data["data"]["visibility"] = "visible"
-    return [current_elements.visible_elements(), ""]
+            queue.append(node.right)
+
+    notification = ""
+    if tot >= MAX_ELEMENTS:
+        notification = dmc.Notification(
+            id="warning-notification",
+            title="Warning",
+            action="show",
+            message=f"Too many elements, only {MAX_ELEMENTS} elements are displayed.",
+            icon=DashIconify(icon="material-symbols:warning"),
+        )
+    return [current_elements.visible_elements(), "", notification]
 
 
 @callback(Output("cytoscape", "elements", allow_duplicate=True), Input("reset", "n_clicks"), prevent_initial_call=True)
@@ -198,6 +219,7 @@ def reconstructCb(input_sorting_algorithm_i: Optional[str], input_N: Optional[st
 
 @callback(
     Output("cytoscape", "stylesheet", allow_duplicate=True),
+    Output("control-loading-output", "children", allow_duplicate=True),
     Input("show-full-labels", "value"),
     State("cytoscape", "stylesheet"),
     prevent_initial_call=True,
@@ -207,11 +229,12 @@ def showFullLabelsCb(show_full_labels: list, stylesheet: list[dict]):
         if rule["selector"] == "node":
             rule["style"]["label"] = "data(full_label)" if len(show_full_labels) else "data(croped_label)"
             break
-    return stylesheet
+    return [stylesheet, ""]
 
 
 DISPLAY_DEPTH = 4
 LABEL_MAX_LENGTH = 50
+MAX_ELEMENTS = 500
 N = 3
 N_RANGE = (1, 8)
 sorting_algorithm_i = 0
@@ -223,60 +246,61 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 if __name__ == "__main__":
     current_elements = Elements.get(sorting_algorithm_i, N)
-
-    app.layout = html.Div(
+    control_panel = html.Div(
         [
-            html.Div(
+            dbc.Button("Expand All", id="expand-all"),
+            dbc.Button("Reset", id="reset"),
+            dbc.Row(
                 [
-                    dbc.Button("Expand All", id="expand-all"),
-                    dbc.Button("Reset", id="reset"),
-                    dbc.Row(
-                        [
-                            "Sorting Algorithm:",
-                            dbc.Select(
-                                options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
-                                value="0",
-                                id="sorting-algorithm",
-                                style={"width": "12rem"},
-                            ),
-                        ],
-                        style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
+                    "Sorting Algorithm:",
+                    dbc.Select(
+                        options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
+                        value="0",
+                        id="sorting-algorithm",
+                        style={"width": "12rem"},
                     ),
-                    dbc.Row(
-                        [
-                            f"N({N_RANGE[0]}~{N_RANGE[1]}):",
-                            dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}, value=N),
-                        ],
-                        style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
-                    ),
-                    # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
-                    dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
-                    dcc.Loading(id="control-loading", type="default", children=html.Div(id="control-loading-output")),
                 ],
-                style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
+                style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
             ),
-            cyto.Cytoscape(
-                id="cytoscape",
-                layout=dict(
-                    name="breadthfirst",
-                    directed=True,
-                    roots="#1",
-                    animate=True,
-                    animationDuration=200,
-                ),
-                elements=current_elements.visible_elements(),
-                style={"height": "100%", "width": "100%"},
-                stylesheet=[
-                    {"selector": "edge", "style": {"label": "data(cmp_op)"}},
-                    {"selector": "node", "style": {"label": "data(croped_label)"}},
-                    {"selector": ".has_hidden_child", "style": {"background-color": "red", "line-color": "red"}},
-                    {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
-                    {"selector": "label", "style": {"color": "#0095FF"}},
+            dbc.Row(
+                [
+                    f"N({N_RANGE[0]}~{N_RANGE[1]}):",
+                    dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}, value=N),
                 ],
-                autoRefreshLayout=True,
+                style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
             ),
+            # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
+            dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
+            dcc.Loading(id="control-loading", type="default", children=html.Div(id="control-loading-output")),
         ],
-        style={"height": "90vh", "width": "98vw", "margin": "auto"},
+        style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
+    )
+    cytoscape = cyto.Cytoscape(
+        id="cytoscape",
+        layout=dict(
+            name="breadthfirst",
+            directed=True,
+            roots="#1",
+            animate=True,
+            animationDuration=200,
+        ),
+        elements=current_elements.visible_elements(),
+        style={"height": "98%", "width": "100%"},
+        stylesheet=[
+            {"selector": "edge", "style": {"label": "data(cmp_op)"}},
+            {"selector": "node", "style": {"label": "data(croped_label)"}},
+            {"selector": ".has_hidden_child", "style": {"background-color": "red", "line-color": "red"}},
+            {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
+            {"selector": "label", "style": {"color": "#0095FF"}},
+        ],
+        autoRefreshLayout=True,
+    )
+
+    app.layout = dmc.NotificationsProvider(
+        html.Div(
+            [html.Div(id="notifications-container"), control_panel, cytoscape],
+            style={"height": "90vh", "width": "98vw", "margin": "auto"},
+        )
     )
 
     app.run()
