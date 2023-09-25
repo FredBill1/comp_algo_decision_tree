@@ -101,7 +101,7 @@ def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
         print_tree(node.right, level + 1, f"[{x}>{y}]")
 
 
-def visualize_tree(node: DecisionTreeNode, name: str = "decision_tree"):
+def visualize_tree(node: DecisionTreeNode, name: str = "decision_tree") -> None:
     from graphviz import Digraph
 
     dot = Digraph(graph_attr={"overlap": "false"})

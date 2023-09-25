@@ -127,11 +127,17 @@ class Elements:
 
         dfs(root)
 
+    def reset(self) -> None:
+        self.element_nodes[1].set_child_hidden()
+        self.element_nodes[1].set_child_visible()
+
     @classmethod
     def get(cls, sorting_algorithm_i: int, N: int) -> "Elements":
         key = (sorting_algorithm_i, N)
         if key not in cls.cached:
             cls.cached[key] = cls(sorting_algorithms[sorting_algorithm_i][1], N)
+        else:
+            cls.cached[key].reset()
         return cls.cached[key]
 
     def visible_elements(self) -> list[dict]:
@@ -151,7 +157,12 @@ def tapNodeCb(node: Optional[dict]):
     return current_elements.visible_elements()
 
 
-@callback(Output("cytoscape", "elements", allow_duplicate=True), Input("expand-all", "n_clicks"), prevent_initial_call=True)
+@callback(
+    Output("cytoscape", "elements", allow_duplicate=True),
+    Output("control-loading-output", "children", allow_duplicate=True),
+    Input("expand-all", "n_clicks"),
+    prevent_initial_call=True,
+)
 def expandAllCb(_: int):
     for node in current_elements.element_nodes.values():
         node.node_data["data"]["visibility"] = "visible"
@@ -159,19 +170,18 @@ def expandAllCb(_: int):
             node.left_edge_data["data"]["visibility"] = "visible"
         if node.right is not None:
             node.right_edge_data["data"]["visibility"] = "visible"
-    return current_elements.visible_elements()
+    return [current_elements.visible_elements(), ""]
 
 
 @callback(Output("cytoscape", "elements", allow_duplicate=True), Input("reset", "n_clicks"), prevent_initial_call=True)
 def resetCb(_: int):
-    current_elements.element_nodes[1].set_child_hidden()
-    current_elements.element_nodes[1].set_child_visible()
+    current_elements.reset()
     return current_elements.visible_elements()
 
 
 @callback(
     Output("cytoscape", "elements", allow_duplicate=True),
-    Output("control-loading-output", "children"),
+    Output("control-loading-output", "children", allow_duplicate=True),
     Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
     prevent_initial_call=True,
