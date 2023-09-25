@@ -1,3 +1,4 @@
+import inspect
 from collections import deque
 from collections.abc import Callable
 from typing import Optional
@@ -232,6 +233,22 @@ def showFullLabelsCb(show_full_labels: list, stylesheet: list[dict]):
     return [stylesheet, ""]
 
 
+@callback(
+    Output("code-modal", "is_open"),
+    Output("code-modal", "children"),
+    Input("show-code", "n_clicks"),
+    State("code-modal", "is_open"),
+    prevent_initial_call=True,
+)
+def showCodeCb(_: int, is_open: bool):
+    code = inspect.getsource(sorting_algorithms[sorting_algorithm_i][1]).strip()
+    children = [
+        dbc.ModalHeader(dbc.ModalTitle(sorting_algorithms[sorting_algorithm_i][0])),
+        dbc.ModalBody(dcc.Markdown(f"```python\n{code}\n```"), style={"margin": "auto"}),
+    ]
+    return [not is_open, children]
+
+
 DISPLAY_DEPTH = 4
 LABEL_MAX_LENGTH = 50
 MAX_ELEMENTS = 500
@@ -262,6 +279,7 @@ if __name__ == "__main__":
                 ],
                 style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
             ),
+            dbc.Button("Show Code", id="show-code"),
             dbc.Row(
                 [
                     f"N({N_RANGE[0]}~{N_RANGE[1]}):",
@@ -295,10 +313,11 @@ if __name__ == "__main__":
         ],
         autoRefreshLayout=True,
     )
+    code_modal = dbc.Modal(id="code-modal", is_open=False, scrollable=True)
 
     app.layout = dmc.NotificationsProvider(
         html.Div(
-            [html.Div(id="notifications-container"), control_panel, cytoscape],
+            [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal],
             style={"height": "90vh", "width": "98vw", "margin": "auto"},
         )
     )
