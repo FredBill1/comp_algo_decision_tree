@@ -49,6 +49,11 @@ def decision_tree(sorting_func: Callable[[list], None], N: int) -> DecisionTreeN
         if not (arrs and cur_cmp_xy == cmp_xys[-1]):
             arrs.append([x for _, x in arr])
             cmp_xys.append((x, y, actual[x] < actual[y]))
+        # TODO: `Hoare quick sort` will be judged as non-deterministic with the following code
+        """
+        else:
+            arrs[-1] = [x for _, x in arr]
+        """
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
     key = cmp_to_key(cmp)
