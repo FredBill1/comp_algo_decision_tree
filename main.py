@@ -6,8 +6,9 @@ from typing import Optional
 import dash_bootstrap_components as dbc
 import dash_cytoscape as cyto
 import dash_mantine_components as dmc
-from dash import Dash, Input, Output, State, callback, dcc, html
+from dash import Dash, dash_table, Input, Output, State, callback, dcc, html
 from dash_iconify import DashIconify
+import plotly.express as px
 
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import *
@@ -89,7 +90,7 @@ class Elements:
         self.elements: list[dict] = []
         self.element_nodes: dict[int, ElementNode] = {}
 
-        root = decision_tree(sorting_func, N)
+        root, self.operation_cnts = decision_tree(sorting_func, N)
 
         def dfs(node: DecisionTreeNode, parent: Optional[ElementNode] = None, is_left: bool = False, depth: int = 0) -> None:
             self.element_nodes[node.id] = element_node = ElementNode(
@@ -241,12 +242,37 @@ def showFullLabelsCb(show_full_labels: list, stylesheet: list[dict]):
     prevent_initial_call=True,
 )
 def showCodeCb(_: int, is_open: bool):
+    if is_open:
+        return [False, []]
     code = inspect.getsource(sorting_algorithms[sorting_algorithm_i][1]).strip()
     children = [
         dbc.ModalHeader(dbc.ModalTitle(sorting_algorithms[sorting_algorithm_i][0])),
         dbc.ModalBody(dcc.Markdown(f"```python\n{code}\n```"), style={"margin": "auto"}),
     ]
-    return [not is_open, children]
+    return [True, children]
+
+
+@callback(
+    Output("statistics-modal", "is_open"),
+    Output("statistics-graph", "figure"),
+    Output("statistics-table", "data"),
+    Input("show-statistics", "n_clicks"),
+    State("statistics-modal", "is_open"),
+    prevent_initial_call=True,
+)
+def showCodeCb(_: int, is_open: bool):
+    if is_open:
+        return [False, {}, []]
+    data = current_elements.operation_cnts
+    fig = px.histogram(
+        x=data,
+        title="Operation Count Distribution",
+        labels={"x": "Operation Count"},
+        color=data,
+        text_auto=True,
+    )
+    fig.layout.update(showlegend=False)
+    return [True, fig, [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}]]
 
 
 DISPLAY_DEPTH = 4
@@ -298,6 +324,7 @@ if __name__ == "__main__":
             ),
             # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
             dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
+            dbc.Button("Show Statistics", id="show-statistics"),
             dcc.Loading(id="control-loading", type="default", children=html.Div(id="control-loading-output")),
         ],
         style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
@@ -323,10 +350,29 @@ if __name__ == "__main__":
         autoRefreshLayout=True,
     )
     code_modal = dbc.Modal(id="code-modal", is_open=False, scrollable=True)
+    statistics_modal = dbc.Modal(
+        id="statistics-modal",
+        size="xl",
+        is_open=False,
+        scrollable=True,
+        children=[
+            dbc.ModalHeader(dbc.ModalTitle("Statistics")),
+            dbc.ModalBody(
+                [
+                    dcc.Graph(id="statistics-graph"),
+                    dash_table.DataTable(
+                        id="statistics-table",
+                        style_cell={"textAlign": "center"},
+                        columns=[{"name": x, "id": x} for x in ("Best", "Worst", "Average")],
+                    ),
+                ]
+            ),
+        ],
+    )
 
     app.layout = dmc.NotificationsProvider(
         html.Div(
-            [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal],
+            [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal, statistics_modal],
             style={"height": "90vh", "width": "98vw", "margin": "auto"},
         )
     )

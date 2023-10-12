@@ -3,3 +3,5 @@ dash-bootstrap-components
 dash-cytoscape
 dash-iconify
 dash-mantine-components
+numpy
+pandas

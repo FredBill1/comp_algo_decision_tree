@@ -1,7 +1,10 @@
 from collections.abc import Callable
 from functools import cmp_to_key
 from itertools import permutations
+from math import factorial
 from typing import Optional
+
+import numpy as np
 
 
 class DecisionTreeNode:
@@ -39,7 +42,7 @@ class InvalidSortingAlgorithmError(Exception):
         super().__init__("Invalid sorting algorithm")
 
 
-def decision_tree(sorting_func: Callable[[list], None], N: int) -> DecisionTreeNode:
+def decision_tree(sorting_func: Callable[[list], None], N: int) -> tuple[DecisionTreeNode, np.ndarray]:
     root = DecisionTreeNode()
 
     def cmp(x: int, y: int) -> int:
@@ -47,6 +50,8 @@ def decision_tree(sorting_func: Callable[[list], None], N: int) -> DecisionTreeN
             return -cmp(y, x)
         cur_cmp_xy = (x, y, actual[x] < actual[y])
         if not (arrs and cur_cmp_xy == cmp_xys[-1]):
+            nonlocal operation_cnt
+            operation_cnt += 1
             arrs.append([x for _, x in arr])
             cmp_xys.append((x, y, actual[x] < actual[y]))
         # TODO: `Hoare quick sort` will be judged as non-deterministic with the following code
@@ -56,14 +61,17 @@ def decision_tree(sorting_func: Callable[[list], None], N: int) -> DecisionTreeN
         """
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
+    operation_cnts = np.zeros(factorial(N), dtype=np.int32)
     key = cmp_to_key(cmp)
-    for actual in permutations(range(1, N + 1)):
+    for I, actual in enumerate(permutations(range(1, N + 1))):
         arrs = []
         cmp_xys = []
         arr = [(key(x), x) for x in range(N)]
+        operation_cnt = 0
         sorting_func(arr)
         if any(actual[x] != y for (_, x), y in zip(arr, range(1, N + 1))):
             raise InvalidSortingAlgorithmError
+        operation_cnts[I] = operation_cnt
         arrs.append([x for _, x in arr])
         cmp_xys.append(None)
         node = root
@@ -92,7 +100,7 @@ def decision_tree(sorting_func: Callable[[list], None], N: int) -> DecisionTreeN
                     node.right = DecisionTreeNode()
                 node = node.right
 
-    return root
+    return root, operation_cnts
 
 
 def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
@@ -129,7 +137,7 @@ if __name__ == "__main__":
     from sorting_algorithms import *
 
     N = 3
-    tree = decision_tree(bubble_sort, N)
+    tree, operation_cnts = decision_tree(bubble_sort, N)
     # tree = decision_tree(quick_sort, N)
     # tree = decision_tree(LomutoQS, N)
     # tree = decision_tree(merge_sort, N)
