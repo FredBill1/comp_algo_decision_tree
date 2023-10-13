@@ -1,6 +1,7 @@
 import inspect
 from collections import deque
 from collections.abc import Callable
+from threading import Lock
 from typing import Optional
 
 import dash_bootstrap_components as dbc
@@ -84,6 +85,7 @@ class ElementNode:
 
 class Elements:
     cached: dict[tuple[int, int], "Elements"] = {}
+    cached_lock = Lock()
 
     def __init__(self, sorting_func: Callable[[list], None], N: int) -> None:
         DecisionTreeNode.reset_id()
@@ -139,11 +141,12 @@ class Elements:
     @classmethod
     def get(cls, sorting_algorithm_i: int, N: int) -> "Elements":
         key = (sorting_algorithm_i, N)
-        if key not in cls.cached:
-            cls.cached[key] = cls(sorting_algorithms[sorting_algorithm_i][1], N)
-        else:
-            cls.cached[key].reset()
-        return cls.cached[key]
+        with cls.cached_lock:
+            if key not in cls.cached:
+                cls.cached[key] = cls(sorting_algorithms[sorting_algorithm_i][1], N)
+            else:
+                cls.cached[key].reset()
+            return cls.cached[key]
 
     def visible_elements(self) -> list[dict]:
         for element_node in self.element_nodes.values():
