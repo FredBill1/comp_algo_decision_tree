@@ -6,9 +6,9 @@ from typing import Optional
 import dash_bootstrap_components as dbc
 import dash_cytoscape as cyto
 import dash_mantine_components as dmc
-from dash import Dash, dash_table, Input, Output, State, callback, dcc, html
-from dash_iconify import DashIconify
 import plotly.express as px
+from dash import Dash, Input, Output, State, callback, dash_table, dcc, html
+from dash_iconify import DashIconify
 
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import *
@@ -323,8 +323,8 @@ if __name__ == "__main__":
                 style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
             ),
             # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
-            dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
             dbc.Button("Show Statistics", id="show-statistics"),
+            dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
             dcc.Loading(id="control-loading", type="default", children=html.Div(id="control-loading-output")),
         ],
         style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
