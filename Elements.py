@@ -10,18 +10,27 @@ from sorting_algorithms import sorting_algorithms
 class ElementNode:
     def __init__(self, node_data: dict, edge_data: Optional[dict]) -> None:
         self.node_data = node_data
-        self.edge_data: Optional[dict] = edge_data
+        self.edge_data = edge_data
         self.left: Optional[ElementNode] = None
         self.right: Optional[ElementNode] = None
         self.crop_label()
+
+    @property
+    def visible(self) -> bool:
+        return self.node_data["data"]["visibility"] == "visible"
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        visible = "visible" if value else "hidden"
+        self.node_data["data"]["visibility"] = visible
+        if self.edge_data is not None:
+            self.edge_data["data"]["visibility"] = visible
 
     def set_child_visible(self) -> None:
         def dfs(node: ElementNode, depth: int) -> None:
             if depth >= DISPLAY_DEPTH:
                 return
-            node.node_data["data"]["visibility"] = "visible"
-            if node.edge_data is not None:
-                node.edge_data["data"]["visibility"] = "visible"
+            node.visible = True
             for child in (node.left, node.right):
                 if child is not None:
                     dfs(child, depth + 1)
@@ -32,8 +41,7 @@ class ElementNode:
         def dfs(node: ElementNode) -> None:
             for child in (node.left, node.right):
                 if child is not None and child.node_data["data"]["visibility"] != "hidden":
-                    child.node_data["data"]["visibility"] = "hidden"
-                    child.edge_data["data"]["visibility"] = "hidden"
+                    child.visible = False
                     dfs(child)
 
         dfs(self)
@@ -54,9 +62,7 @@ class ElementNode:
             self.node_data["data"]["croped_label"] = label
 
     def has_hidden_child(self) -> bool:
-        return (self.left is not None and self.left.node_data["data"]["visibility"] == "hidden") or (
-            self.right is not None and self.right.node_data["data"]["visibility"] == "hidden"
-        )
+        return (self.left is not None and not self.left.visible) or (self.right is not None and not self.right.visible)
 
     def is_leaf(self) -> bool:
         return self.left is None and self.right is None

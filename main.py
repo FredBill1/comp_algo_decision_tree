@@ -52,14 +52,11 @@ def on_expand_all(_: int, user_state: dict):
     queue = deque([current_elements.element_nodes[0]])
     while queue:
         node = queue.popleft()
-        node.node_data["data"]["visibility"] = "visible"
+        node.visible = True
         tot += 1
-        if tot < MAX_ELEMENTS and node.left is not None:
-            node.left_edge_data["data"]["visibility"] = "visible"
-            queue.append(node.left)
-        if tot < MAX_ELEMENTS and node.right is not None:
-            node.right_edge_data["data"]["visibility"] = "visible"
-            queue.append(node.right)
+        for child in (node.left, node.right):
+            if tot < MAX_ELEMENTS and child is not None:
+                queue.append(child)
 
     notification = ""
     if tot >= MAX_ELEMENTS:
@@ -250,7 +247,7 @@ statistics_modal = dbc.Modal(
         ),
     ],
 )
-user_state = dcc.Store(id="user-state", storage_type="session")
+user_state = dcc.Store(id="user-state", storage_type=USER_STATE_STORAGE_TYPE)
 
 app = Dash(
     __name__,

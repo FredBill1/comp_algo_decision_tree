@@ -6,6 +6,7 @@ N_RANGE = (1, 8)
 DEFAULT_USER_STATE = dict(
     N=3,
     sorting_algorithm_i=0,
-    show_full_labels=[],
+    show_full_labels=False,
     visible_state=None,
 )
+USER_STATE_STORAGE_TYPE = "session"
