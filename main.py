@@ -208,12 +208,13 @@ control_panel = html.Div(
     ],
     style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
 )
+cyto.load_extra_layouts()
 cytoscape = cyto.Cytoscape(
     id="cytoscape",
     layout=dict(
-        name="breadthfirst",
-        directed=True,
-        roots="#0",
+        name="dagre",
+        rankDir="UD",
+        spacingFactor=1.75,
         animate=True,
         animationDuration=200,
     ),
