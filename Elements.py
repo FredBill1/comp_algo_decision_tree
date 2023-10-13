@@ -1,3 +1,5 @@
+import base64
+import zlib
 from collections.abc import Callable
 from threading import Lock
 from typing import Optional
@@ -139,11 +141,13 @@ class Elements:
             return cls.cached[key]
 
     def get_visiblity(self) -> str:
-        return "".join("1" if element["data"]["visibility"] == "visible" else "0" for element in self.elements)
+        data = b"".join(b"\x01" if element["data"]["visibility"] == "visible" else b"\x00" for element in self.elements)
+        return base64.b64encode(zlib.compress(data)).decode()
 
     def set_visiblity(self, visiblity: str) -> None:
-        for element, vis in zip(self.elements, visiblity):
-            element["data"]["visibility"] = "visible" if vis == "1" else "hidden"
+        data = zlib.decompress(base64.b64decode(visiblity))
+        for element, vis in zip(self.elements, data):
+            element["data"]["visibility"] = "visible" if vis else "hidden"
 
     def visible_elements(self) -> list[dict]:
         for element_node in self.element_nodes:
