@@ -11,8 +11,8 @@ class DecisionTreeNode:
     tot = 0
 
     def __init__(self) -> None:
-        DecisionTreeNode.tot += 1
         self.id: int = DecisionTreeNode.tot
+        DecisionTreeNode.tot += 1
         self.arr: Optional[list[int]] = None
         self.cmp_xy: Optional[tuple[int, int]] = None
         self.actuals: list[list[int]] = []
