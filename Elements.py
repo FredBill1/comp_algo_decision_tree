@@ -8,12 +8,11 @@ from sorting_algorithms import sorting_algorithms
 
 
 class ElementNode:
-    def __init__(self, node_data: dict) -> None:
+    def __init__(self, node_data: dict, edge_data: Optional[dict]) -> None:
         self.node_data = node_data
+        self.edge_data: Optional[dict] = edge_data
         self.left: Optional[ElementNode] = None
-        self.left_edge_data: Optional[dict] = None
         self.right: Optional[ElementNode] = None
-        self.right_edge_data: Optional[dict] = None
         self.crop_label()
 
     def set_child_visible(self) -> None:
@@ -21,33 +20,23 @@ class ElementNode:
             if depth >= DISPLAY_DEPTH:
                 return
             node.node_data["data"]["visibility"] = "visible"
-            if node.left is not None:
-                if depth + 1 < DISPLAY_DEPTH:
-                    node.left_edge_data["data"]["visibility"] = "visible"
-                dfs(node.left, depth + 1)
-            if node.right is not None:
-                if depth + 1 < DISPLAY_DEPTH:
-                    node.right_edge_data["data"]["visibility"] = "visible"
-                dfs(node.right, depth + 1)
+            if node.edge_data is not None:
+                node.edge_data["data"]["visibility"] = "visible"
+            for child in (node.left, node.right):
+                if child is not None:
+                    dfs(child, depth + 1)
 
         dfs(self, 0)
 
     def set_child_hidden(self) -> None:
         def dfs(node: ElementNode) -> None:
-            if node.node_data["data"]["visibility"] == "hidden":
-                return
-            node.node_data["data"]["visibility"] = "hidden"
-            if node.left is not None:
-                node.left_edge_data["data"]["visibility"] = "hidden"
-                dfs(node.left)
-            if node.right is not None:
-                node.right_edge_data["data"]["visibility"] = "hidden"
-                dfs(node.right)
+            for child in (node.left, node.right):
+                if child is not None and child.node_data["data"]["visibility"] != "hidden":
+                    child.node_data["data"]["visibility"] = "hidden"
+                    child.edge_data["data"]["visibility"] = "hidden"
+                    dfs(child)
 
-        for child, edge in zip((self.left, self.right), (self.left_edge_data, self.right_edge_data)):
-            if child is not None:
-                edge["data"]["visibility"] = "hidden"
-                dfs(child)
+        dfs(self)
 
     def update_classes(self) -> None:
         if self.is_leaf():
@@ -72,7 +61,7 @@ class ElementNode:
     def is_leaf(self) -> bool:
         return self.left is None and self.right is None
 
-    __slots__ = ["node_data", "left", "left_edge_data", "right", "right_edge_data"]
+    __slots__ = ["node_data", "edge_data", "left", "right"]
 
 
 class Elements:
@@ -86,7 +75,13 @@ class Elements:
 
         root, self.operation_cnts = decision_tree(sorting_func, N)
 
-        def dfs(node: DecisionTreeNode, parent: Optional[ElementNode] = None, is_left: bool = False, depth: int = 0) -> None:
+        def dfs(
+            node: DecisionTreeNode,
+            parent: Optional[ElementNode] = None,
+            edge_data: Optional[dict] = None,
+            is_left: bool = False,
+            depth: int = 0,
+        ) -> None:
             while len(self.element_nodes) <= node.id:
                 self.element_nodes.append(None)
             self.element_nodes[node.id] = element_node = ElementNode(
@@ -97,6 +92,7 @@ class Elements:
                         "full_label": node.get_arr() + " " + node.get_actuals(),
                     }
                 },
+                edge_data,
             )
             if parent is not None:
                 if is_left:
@@ -115,16 +111,12 @@ class Elements:
                         "data": {
                             "source": str(node.id),
                             "target": str(child.id),
-                            "visibility": "visible" if depth < DISPLAY_DEPTH - 1 else "hidden",
+                            "visibility": "visible" if depth + 1 < DISPLAY_DEPTH else "hidden",
                             "cmp_op": f"{x}{op}{y}",
                         }
                     }
                     self.elements.append(edge_data)
-                    if is_left:
-                        element_node.left_edge_data = edge_data
-                    else:
-                        element_node.right_edge_data = edge_data
-                    dfs(child, element_node, is_left, depth + 1)
+                    dfs(child, element_node, edge_data, is_left, depth + 1)
 
         dfs(root)
 
