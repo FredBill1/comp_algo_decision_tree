@@ -5,3 +5,4 @@ dash-iconify
 dash-mantine-components
 numpy
 pandas
+sortednp

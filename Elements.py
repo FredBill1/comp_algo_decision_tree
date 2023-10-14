@@ -1,8 +1,12 @@
 import base64
 import zlib
+from collections import deque
 from collections.abc import Callable
 from threading import Lock
 from typing import Optional
+
+import numpy as np
+import sortednp as snp
 
 from Config import *
 from decision_tree import DecisionTreeNode, decision_tree
@@ -10,74 +14,26 @@ from sorting_algorithms import sorting_algorithms
 
 
 class ElementNode:
-    def __init__(self, node_data: dict, edge_data: Optional[dict]) -> None:
-        self.node_data = node_data
+    def __init__(self, id: int, full_label: str, edge_data: Optional[dict]) -> None:
+        self.id = id
+        self.data = dict(
+            id=str(id),
+            full_label=full_label,
+            cropped_label=full_label[: LABEL_MAX_LENGTH - 3] + "..." if len(full_label) > LABEL_MAX_LENGTH else full_label,
+        )
         self.edge_data = edge_data
         self.left: Optional[ElementNode] = None
         self.right: Optional[ElementNode] = None
-        self.crop_label()
 
     @property
-    def visible(self) -> bool:
-        return self.node_data["data"]["visibility"] == "visible"
+    def node_data(self) -> dict:
+        return {"data": dict(self.data)}
 
-    @visible.setter
-    def visible(self, value: bool) -> None:
-        visible = "visible" if value else "hidden"
-        self.node_data["data"]["visibility"] = visible
-        if self.edge_data is not None:
-            self.edge_data["data"]["visibility"] = visible
-
-    def set_child_visible(self) -> None:
-        def dfs(node: ElementNode, depth: int) -> None:
-            if depth >= DISPLAY_DEPTH:
-                return
-            node.visible = True
-            for child in (node.left, node.right):
-                if child is not None:
-                    dfs(child, depth + 1)
-
-        dfs(self, 0)
-
-    def set_child_hidden(self) -> None:
-        def dfs(node: ElementNode) -> None:
-            for child in (node.left, node.right):
-                if child is not None and child.node_data["data"]["visibility"] != "hidden":
-                    child.visible = False
-                    dfs(child)
-
-        dfs(self)
-
-    def update_classes(self) -> None:
-        if self.is_leaf():
-            self.node_data["classes"] = "is_leaf"
-        elif self.has_hidden_child():
-            self.node_data["classes"] = "has_hidden_child"
-        else:
-            self.node_data["classes"] = ""
-
-    def crop_label(self) -> None:
-        label = self.node_data["data"]["full_label"]
-        if len(label) > LABEL_MAX_LENGTH:
-            self.node_data["data"]["croped_label"] = label[: LABEL_MAX_LENGTH - 3] + "..."
-        else:
-            self.node_data["data"]["croped_label"] = label
-
-    def has_hidden_child(self) -> bool:
-        return (self.left is not None and not self.left.visible) or (self.right is not None and not self.right.visible)
-
-    def is_leaf(self) -> bool:
-        return self.left is None and self.right is None
-
-    __slots__ = ["node_data", "edge_data", "left", "right"]
+    __slots__ = ["id", "data", "edge_data", "left", "right"]
 
 
-class Elements:
-    cached: dict[tuple[int, int], "Elements"] = {}
-    cached_lock = Lock()
-
+class ElementHolder:
     def __init__(self, sorting_func: Callable[[list], None], N: int) -> None:
-        self.elements: list[dict] = []
         self.element_nodes: list[ElementNode] = []
 
         root, self.operation_cnts = decision_tree(sorting_func, N)
@@ -87,26 +43,17 @@ class Elements:
             parent: Optional[ElementNode] = None,
             edge_data: Optional[dict] = None,
             is_left: bool = False,
+            cmp_op: Optional[str] = None,
             depth: int = 0,
         ) -> None:
-            while len(self.element_nodes) <= node.id:
-                self.element_nodes.append(None)
-            self.element_nodes[node.id] = element_node = ElementNode(
-                {
-                    "data": {
-                        "id": str(node.id),
-                        "visibility": "visible" if depth < DISPLAY_DEPTH else "hidden",
-                        "full_label": node.get_arr() + " " + node.get_actuals(),
-                    }
-                },
-                edge_data,
-            )
+            element_node = ElementNode(len(self.element_nodes), node.get_arr() + " " + node.get_actuals(), edge_data)
+            self.element_nodes.append(element_node)
             if parent is not None:
+                element_node.edge_data = {"data": dict(source=str(parent.id), target=str(element_node.id), cmp_op=cmp_op)}
                 if is_left:
                     parent.left = element_node
                 else:
                     parent.right = element_node
-            self.elements.append(element_node.node_data)
 
             if node.cmp_xy is None:
                 return
@@ -114,37 +61,118 @@ class Elements:
             for op, child in zip("<>", [node.left, node.right]):
                 if child is not None:
                     is_left = op == "<"
-                    edge_data = {
-                        "data": {
-                            "source": str(node.id),
-                            "target": str(child.id),
-                            "visibility": "visible" if depth + 1 < DISPLAY_DEPTH else "hidden",
-                            "cmp_op": f"{x}{op}{y}",
-                        }
-                    }
-                    self.elements.append(edge_data)
-                    dfs(child, element_node, edge_data, is_left, depth + 1)
+                    dfs(child, element_node, edge_data, is_left, f"{x}{op}{y}", depth + 1)
 
         dfs(root)
 
+
+class Elements:
+    cached: dict[tuple[int, int], ElementHolder] = {}
+    cached_lock = Lock()
+
+    def __init__(self, sorting_algorithm_i: int, N: int, visiblity_state: Optional[str], **kwargs) -> None:
+        self.element_holder = self.get_element_holder(sorting_algorithm_i, N)
+        if visiblity_state is not None:
+            self.visiblity_state = self.decode_visiblity(visiblity_state)
+        else:
+            self.visiblity_state = np.array([0], dtype=np.int32)
+            self.expand_childs(0)
+
     @classmethod
-    def get(cls, sorting_algorithm_i: int, N: int) -> "Elements":
+    def get_element_holder(cls, sorting_algorithm_i: int, N: int, **kwargs) -> ElementHolder:
         key = (sorting_algorithm_i, N)
         with cls.cached_lock:
             if key not in cls.cached:
-                cls.cached[key] = cls(sorting_algorithms[sorting_algorithm_i][1], N)
+                cls.cached[key] = ElementHolder(sorting_algorithms[sorting_algorithm_i][1], N)
             return cls.cached[key]
 
-    def get_visiblity(self) -> str:
-        data = b"".join(b"\x01" if element["data"]["visibility"] == "visible" else b"\x00" for element in self.elements)
-        return base64.b64encode(zlib.compress(data)).decode()
+    def get_visiblity_state(self) -> str:
+        return self.encode_visiblity(self.visiblity_state)
 
-    def set_visiblity(self, visiblity: str) -> None:
-        data = zlib.decompress(base64.b64decode(visiblity))
-        for element, vis in zip(self.elements, data):
-            element["data"]["visibility"] = "visible" if vis else "hidden"
+    @staticmethod
+    def encode_visiblity(visiblity: np.ndarray) -> str:
+        return base64.b64encode(zlib.compress(visiblity.tobytes())).decode()
+
+    @staticmethod
+    def decode_visiblity(visiblity: str) -> np.ndarray:
+        return np.frombuffer(zlib.decompress(base64.b64decode(visiblity)), dtype=np.int32)
+
+    def node_visiblity(self, id: int) -> bool:
+        i = self.visiblity_state.searchsorted(id)
+        return i < len(self.visiblity_state) and self.visiblity_state[i] == id
+
+    def node_has_hidden_child(self, id: int) -> bool:
+        node = self.element_holder.element_nodes[id]
+        for child in (node.left, node.right):
+            if child is not None and not self.node_visiblity(child.id):
+                return True
+        return False
+
+    def node_is_leaf(self, id: int) -> bool:
+        node = self.element_holder.element_nodes[id]
+        return node.left is None and node.right is None
+
+    def expand_childs(self, id: int) -> None:
+        update: list[int] = []
+
+        def dfs(node: ElementNode, depth: int) -> None:
+            for child in (node.left, node.right):
+                if child is not None:
+                    if not self.node_visiblity(child.id):
+                        update.append(child.id)
+                    if depth < DISPLAY_DEPTH:
+                        dfs(child, depth + 1)
+
+        dfs(self.element_holder.element_nodes[id], 1)
+        self.visiblity_state = snp.merge(self.visiblity_state, np.array(update, dtype=np.int32))
+
+    def hide_childs(self, id: int) -> None:
+        deletes: list[int] = []
+
+        def dfs(node: ElementNode) -> None:
+            for child in (node.left, node.right):
+                if child is not None:
+                    i = self.visiblity_state.searchsorted(child.id)
+                    if i < len(self.visiblity_state) and self.visiblity_state[i] == child.id:
+                        deletes.append(i)
+                        dfs(child)
+
+        dfs(self.element_holder.element_nodes[id])
+        self.visiblity_state = np.delete(self.visiblity_state, deletes)
+
+    def on_tap_node(self, id: int) -> None:
+        if self.node_has_hidden_child(id):
+            self.expand_childs(id)
+        else:
+            self.hide_childs(id)
+
+    def expand_all(self) -> bool:
+        elem: list[int] = []
+        Q = deque([self.element_holder.element_nodes[0]])
+        tot = 1
+        while Q and tot < MAX_ELEMENTS:
+            node = Q.popleft()
+            elem.append(node.id)
+            for child in (node.left, node.right):
+                if tot < MAX_ELEMENTS and child is not None:
+                    tot += 1
+                    Q.append(child)
+        self.visiblity_state = np.array(elem, dtype=np.int32)
+        self.visiblity_state.sort()
+        return tot < MAX_ELEMENTS
 
     def visible_elements(self) -> list[dict]:
-        for element_node in self.element_nodes:
-            element_node.update_classes()
-        return [element for element in self.elements if element["data"]["visibility"] == "visible"]
+        ret = []
+        for id in self.visiblity_state:
+            node: ElementNode = self.element_holder.element_nodes[id]
+            node_data = node.node_data
+            if self.node_is_leaf(id):
+                node_data["classes"] = "is_leaf"
+            elif self.node_has_hidden_child(id):
+                node_data["classes"] = "has_hidden_child"
+            else:
+                node_data["classes"] = ""
+            ret.append(node_data)
+            if node.edge_data is not None:
+                ret.append(node.edge_data)
+        return ret

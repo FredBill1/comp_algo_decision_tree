@@ -8,8 +8,7 @@ import numpy as np
 
 
 class DecisionTreeNode:
-    def __init__(self, id: int) -> None:
-        self.id: int = id
+    def __init__(self) -> None:
         self.arr: Optional[list[int]] = None
         self.cmp_xy: Optional[tuple[int, int]] = None
         self.actuals: list[list[int]] = []
@@ -22,7 +21,7 @@ class DecisionTreeNode:
     def get_actuals(self) -> str:
         return " ".join("(" + ",".join(map(str, x)) + ")" for x in self.actuals)
 
-    __slots__ = ["id", "arr", "cmp_xy", "actuals", "left", "right"]
+    __slots__ = ["arr", "cmp_xy", "actuals", "left", "right"]
 
 
 class NonDeterministicError(Exception):
@@ -36,7 +35,7 @@ class InvalidSortingAlgorithmError(Exception):
 
 
 def decision_tree(sorting_func: Callable[[list], None], N: int) -> tuple[DecisionTreeNode, np.ndarray]:
-    root = DecisionTreeNode(id := 0)
+    root = DecisionTreeNode()
 
     def cmp(x: int, y: int) -> int:
         if x > y:
@@ -86,11 +85,11 @@ def decision_tree(sorting_func: Callable[[list], None], N: int) -> tuple[Decisio
 
             if cmp_xy[2]:  # x < y
                 if node.left is None:
-                    node.left = DecisionTreeNode(id := id + 1)
+                    node.left = DecisionTreeNode()
                 node = node.left
             else:
                 if node.right is None:
-                    node.right = DecisionTreeNode(id := id + 1)
+                    node.right = DecisionTreeNode()
                 node = node.right
 
     return root, operation_cnts
@@ -107,25 +106,6 @@ def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
         print_tree(node.right, level + 1, f"[{x}>{y}]")
 
 
-def visualize_tree(node: DecisionTreeNode, name: str = "decision_tree") -> None:
-    from graphviz import Digraph
-
-    dot = Digraph(graph_attr={"overlap": "false"})
-
-    def dfs(node: DecisionTreeNode):
-        dot.node(str(node.id), node.get_arr(), xlabel=node.get_actuals())
-        if node.cmp_xy is None:
-            return
-        x, y = [chr(ord("a") + x) for x in node.cmp_xy]
-        for op, child in zip("<>", [node.left, node.right]):
-            if child is not None:
-                dot.edge(str(node.id), str(child.id), label=f"{x}{op}{y}")
-                dfs(child)
-
-    dfs(node)
-    dot.render(f"{name}.gv", view=True)
-
-
 if __name__ == "__main__":
     from sorting_algorithms import *
 
@@ -135,4 +115,3 @@ if __name__ == "__main__":
     # tree = decision_tree(LomutoQS, N)
     # tree = decision_tree(merge_sort, N)
     print_tree(tree)
-    visualize_tree(tree)

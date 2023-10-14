@@ -1,6 +1,4 @@
 import inspect
-from collections import deque
-from copy import deepcopy
 from typing import Optional
 
 import dash_bootstrap_components as dbc
@@ -22,18 +20,9 @@ from sorting_algorithms import sorting_algorithms
     prevent_initial_call=True,
 )
 def on_tap_node(node: Optional[dict], user_state: dict):
-    sorting_algorithm_i, N, visible_state = user_state["sorting_algorithm_i"], user_state["N"], user_state["visible_state"]
-    current_elements = deepcopy(Elements.get(sorting_algorithm_i, N))  # TODO: deepcopied twice
-    if visible_state is not None:
-        current_elements.set_visiblity(visible_state)
-
-    element_node = current_elements.element_nodes[int(node["data"]["id"])]
-    if element_node.has_hidden_child():
-        element_node.set_child_visible()
-    else:
-        element_node.set_child_hidden()
-
-    user_state["visible_state"] = current_elements.get_visiblity()
+    elements = Elements(**user_state)
+    elements.on_tap_node(int(node["data"]["id"]))
+    user_state["visiblity_state"] = elements.get_visiblity_state()
     return user_state
 
 
@@ -45,21 +34,9 @@ def on_tap_node(node: Optional[dict], user_state: dict):
     prevent_initial_call=True,
 )
 def on_expand_all(_: int, user_state: dict):
-    tot = 1
-    sorting_algorithm_i, N = user_state["sorting_algorithm_i"], user_state["N"]
-    current_elements = deepcopy(Elements.get(sorting_algorithm_i, N))  # TODO: deepcopied twice
-
-    queue = deque([current_elements.element_nodes[0]])
-    while queue:
-        node = queue.popleft()
-        node.visible = True
-        tot += 1
-        for child in (node.left, node.right):
-            if tot < MAX_ELEMENTS and child is not None:
-                queue.append(child)
-
+    elements = Elements(**user_state)
     notification = ""
-    if tot >= MAX_ELEMENTS:
+    if not elements.expand_all():
         notification = dmc.Notification(
             id="warning-notification",
             title="Warning",
@@ -67,7 +44,7 @@ def on_expand_all(_: int, user_state: dict):
             message=f"Too many elements, only {MAX_ELEMENTS} elements are displayed.",
             icon=DashIconify(icon="material-symbols:warning"),
         )
-    user_state["visible_state"] = current_elements.get_visiblity()
+    user_state["visiblity_state"] = elements.get_visiblity_state()
     return [user_state, notification]
 
 
@@ -78,7 +55,7 @@ def on_expand_all(_: int, user_state: dict):
     prevent_initial_call=True,
 )
 def on_reset(_: int, user_state: dict):
-    user_state["visible_state"] = None
+    user_state["visiblity_state"] = None
     return user_state
 
 
@@ -114,22 +91,15 @@ def on_data(
     elif trigger_id == "show-full-labels":
         user_state["show_full_labels"] = bool(show_full_labels)
     if trigger_id in ("sorting-algorithm", "input-N"):
-        user_state["visible_state"] = None
+        user_state["visiblity_state"] = None
 
-    sorting_algorithm_i, N, show_full_labels, visible_state = (
-        user_state["sorting_algorithm_i"],
-        user_state["N"],
-        user_state["show_full_labels"],
-        user_state["visible_state"],
-    )
-    current_elements = deepcopy(Elements.get(user_state["sorting_algorithm_i"], user_state["N"]))
-    if visible_state is not None:
-        current_elements.set_visiblity(visible_state)
+    sorting_algorithm_i, N, show_full_labels = user_state["sorting_algorithm_i"], user_state["N"], user_state["show_full_labels"]
+    elements = Elements(**user_state)
     for rule in stylesheet:
         if rule["selector"] == "node":
-            rule["style"]["label"] = "data(full_label)" if show_full_labels else "data(croped_label)"
+            rule["style"]["label"] = "data(full_label)" if show_full_labels else "data(cropped_label)"
             break
-    return [user_state, current_elements.visible_elements(), stylesheet, str(sorting_algorithm_i), str(N), [0] if show_full_labels else [], ""]
+    return [user_state, elements.visible_elements(), stylesheet, str(sorting_algorithm_i), str(N), [0] if show_full_labels else [], ""]
 
 
 @callback(
@@ -164,16 +134,9 @@ def on_show_code(_: int, is_open: bool, user_state: dict):
 def on_show_statics(_: int, is_open: bool, user_state: dict):
     if is_open:
         return [False, {}, []]
-    sorting_algorithm_i, N = user_state["sorting_algorithm_i"], user_state["N"]
-    current_elements = Elements.get(sorting_algorithm_i, N)
-    data = current_elements.operation_cnts
-    fig = px.histogram(
-        x=data,
-        title="Operation Count Distribution",
-        labels={"x": "Operation Count"},
-        color=data,
-        text_auto=True,
-    )
+    element_holder = Elements.get_element_holder(**user_state)
+    data = element_holder.operation_cnts
+    fig = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
     fig.layout.update(showlegend=False)
     return [True, fig, [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}]]
 
@@ -221,7 +184,7 @@ cytoscape = cyto.Cytoscape(
     style={"height": "98%", "width": "100%"},
     stylesheet=[
         {"selector": "edge", "style": {"label": "data(cmp_op)", "curve-style": "bezier", "target-arrow-shape": "triangle"}},
-        {"selector": "node", "style": {"label": "data(croped_label)"}},
+        {"selector": "node", "style": {"label": "data(cropped_label)"}},
         {"selector": ".has_hidden_child", "style": {"background-color": "red", "line-color": "red"}},
         {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
         {"selector": "label", "style": {"color": "#0095FF"}},
