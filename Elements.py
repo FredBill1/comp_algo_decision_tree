@@ -77,7 +77,6 @@ class Elements:
     cached_lock = Lock()
 
     def __init__(self, sorting_func: Callable[[list], None], N: int) -> None:
-        DecisionTreeNode.reset_id()
         self.elements: list[dict] = []
         self.element_nodes: list[ElementNode] = []
 
@@ -127,10 +126,6 @@ class Elements:
                     dfs(child, element_node, edge_data, is_left, depth + 1)
 
         dfs(root)
-
-    def reset(self) -> None:
-        self.element_nodes[0].set_child_hidden()
-        self.element_nodes[0].set_child_visible()
 
     @classmethod
     def get(cls, sorting_algorithm_i: int, N: int) -> "Elements":

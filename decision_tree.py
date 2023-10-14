@@ -8,11 +8,8 @@ import numpy as np
 
 
 class DecisionTreeNode:
-    tot = 0
-
-    def __init__(self) -> None:
-        self.id: int = DecisionTreeNode.tot
-        DecisionTreeNode.tot += 1
+    def __init__(self, id: int) -> None:
+        self.id: int = id
         self.arr: Optional[list[int]] = None
         self.cmp_xy: Optional[tuple[int, int]] = None
         self.actuals: list[list[int]] = []
@@ -24,10 +21,6 @@ class DecisionTreeNode:
 
     def get_actuals(self) -> str:
         return " ".join("(" + ",".join(map(str, x)) + ")" for x in self.actuals)
-
-    @classmethod
-    def reset_id(cls) -> None:
-        cls.tot = 0
 
     __slots__ = ["id", "arr", "cmp_xy", "actuals", "left", "right"]
 
@@ -43,7 +36,7 @@ class InvalidSortingAlgorithmError(Exception):
 
 
 def decision_tree(sorting_func: Callable[[list], None], N: int) -> tuple[DecisionTreeNode, np.ndarray]:
-    root = DecisionTreeNode()
+    root = DecisionTreeNode(id := 0)
 
     def cmp(x: int, y: int) -> int:
         if x > y:
@@ -93,11 +86,11 @@ def decision_tree(sorting_func: Callable[[list], None], N: int) -> tuple[Decisio
 
             if cmp_xy[2]:  # x < y
                 if node.left is None:
-                    node.left = DecisionTreeNode()
+                    node.left = DecisionTreeNode(id := id + 1)
                 node = node.left
             else:
                 if node.right is None:
-                    node.right = DecisionTreeNode()
+                    node.right = DecisionTreeNode(id := id + 1)
                 node = node.right
 
     return root, operation_cnts
