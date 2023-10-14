@@ -14,11 +14,11 @@ from sorting_algorithms import sorting_algorithms
 
 
 class ElementNode:
-    def __init__(self, id: int, full_label: str) -> None:
+    def __init__(self, id: int, full_label: str, parent_id: Optional[int] = None, cmp_op: Optional[str] = None) -> None:
         self.id = id
         self.full_label = full_label
         self.cropped_label = self.full_label[: LABEL_MAX_LENGTH - 3] + "..." if len(self.full_label) > LABEL_MAX_LENGTH else self.full_label
-        self.edge_data: Optional[dict] = None
+        self.edge_data: Optional[dict] = None if parent_id is None else {"data": dict(source=str(parent_id), target=str(id), cmp_op=cmp_op)}
         self.left: Optional[ElementNode] = None
         self.right: Optional[ElementNode] = None
 
@@ -30,28 +30,25 @@ class ElementNode:
 
 class ElementHolder:
     def __init__(self, sorting_func: Callable[[list], None], N: int) -> None:
-        self.element_nodes: list[ElementNode] = []
+        tree_node, self.operation_cnts = decision_tree(sorting_func, N)
 
-        root, self.operation_cnts = decision_tree(sorting_func, N)
-
-        Q: deque[tuple[DecisionTreeNode, Optional[ElementNode], Optional[int], Optional[str]]] = deque([(root, None, None, None)])
+        self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_arr() + " " + tree_node.get_actuals())]
+        Q: deque[tuple[DecisionTreeNode, ElementNode]] = deque([(tree_node, element_node)])
         while Q:
-            node, parent, is_right, cmp_op = Q.popleft()
-            element_node = ElementNode(len(self.element_nodes), node.get_arr() + " " + node.get_actuals())
-            self.element_nodes.append(element_node)
-            if parent is not None:
-                element_node.edge_data = {"data": dict(source=str(parent.id), target=str(element_node.id), cmp_op=cmp_op)}
-                if is_right:
-                    parent.right = element_node
-                else:
-                    parent.left = element_node
-
-            if node.cmp_xy is None:
+            tree_node, element_node = Q.popleft()
+            if tree_node.cmp_xy is None:  # leaf node
                 continue
-            x, y = [chr(ord("a") + x) for x in node.cmp_xy]
-            for is_right, (op, child) in enumerate(zip("<>", [node.left, node.right])):
-                if child is not None:
-                    Q.append((child, element_node, is_right, f"{x}{op}{y}"))
+            x, y = [chr(ord("a") + x) for x in tree_node.cmp_xy]
+            for is_right, (op, child) in enumerate(zip("<>", [tree_node.left, tree_node.right])):
+                if child is None:
+                    continue
+                child_element_node = ElementNode(len(self.element_nodes), child.get_arr() + " " + child.get_actuals(), element_node.id, f"{x}{op}{y}")
+                self.element_nodes.append(child_element_node)
+                if is_right:
+                    element_node.right = child_element_node
+                else:
+                    element_node.left = child_element_node
+                Q.append((child, child_element_node))
 
     __slots__ = ["element_nodes", "operation_cnts"]
 
