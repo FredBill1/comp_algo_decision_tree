@@ -66,7 +66,7 @@ class Elements:
             self.visiblity_state = self.decode_visiblity(visiblity_state)
         else:
             self.visiblity_state = np.array([0], dtype=np.int32)
-            self.expand_childs(0)
+            self.expand_children(0)
 
     @classmethod
     def get_element_holder(cls, sorting_algorithm_i: int, N: int, **kwargs) -> ElementHolder:
@@ -102,7 +102,7 @@ class Elements:
         node = self.element_holder.element_nodes[id]
         return node.left is None and node.right is None
 
-    def expand_childs(self, id: int) -> None:
+    def expand_children(self, id: int) -> None:
         update: list[int] = []
         Q = deque([self.element_holder.element_nodes[id]])
         depth = 0
@@ -117,7 +117,7 @@ class Elements:
             depth += 1
         self.visiblity_state = snp.merge(self.visiblity_state, np.array(update, dtype=np.int32), duplicates=snp.DROP)
 
-    def hide_childs(self, id: int) -> None:
+    def hide_children(self, id: int) -> None:
         deletes: list[int] = []
         Q = deque([self.element_holder.element_nodes[id]])
         while Q:
@@ -134,9 +134,9 @@ class Elements:
         if self.node_is_leaf(id):
             return
         if self.node_has_hidden_child(id):
-            self.expand_childs(id)
+            self.expand_children(id)
         else:
-            self.hide_childs(id)
+            self.hide_children(id)
 
     def expand_all(self) -> bool:
         elem: list[int] = []
