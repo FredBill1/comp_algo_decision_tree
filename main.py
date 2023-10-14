@@ -16,7 +16,6 @@ from sorting_algorithms import sorting_algorithms
 @callback(
     Output("user-state", "data"),
     Output("cytoscape", "elements"),
-    Output("cytoscape", "stylesheet"),
     Output("sorting-algorithm", "value"),
     Output("input-N", "value"),
     Output("show-full-labels", "value"),
@@ -29,7 +28,6 @@ from sorting_algorithms import sorting_algorithms
     Input("cytoscape", "tapNode"),
     Input("expand-all", "n_clicks"),
     Input("reset", "n_clicks"),
-    State("cytoscape", "stylesheet"),
 )
 def on_data(
     user_state: dict,
@@ -39,7 +37,6 @@ def on_data(
     node: Optional[dict],
     _expand_all: int,
     _reset: int,
-    stylesheet: list[dict],
 ):
     if not user_state:
         user_state = DEFAULT_USER_STATE
@@ -71,11 +68,15 @@ def on_data(
         user_state["visiblity_state"] = elements.get_visiblity_state()
 
     sorting_algorithm_i, N, show_full_labels = user_state["sorting_algorithm_i"], user_state["N"], user_state["show_full_labels"]
-    for rule in stylesheet:
-        if rule["selector"] == "node":
-            rule["style"]["label"] = "data(full_label)" if show_full_labels else "data(cropped_label)"
-            break
-    return [user_state, elements.visible_elements(), stylesheet, str(sorting_algorithm_i), str(N), [0] if show_full_labels else [], notification, ""]
+    return [
+        user_state,
+        elements.visible_elements(show_full_labels),
+        str(sorting_algorithm_i),
+        str(N),
+        [0] if show_full_labels else [],
+        notification,
+        "",
+    ]
 
 
 @callback(
@@ -160,7 +161,7 @@ cytoscape = cyto.Cytoscape(
     style={"height": "98%", "width": "100%"},
     stylesheet=[
         {"selector": "edge", "style": {"label": "data(cmp_op)", "curve-style": "bezier", "target-arrow-shape": "triangle"}},
-        {"selector": "node", "style": {"label": "data(cropped_label)"}},
+        {"selector": "node", "style": {"label": "data(label)"}},
         {"selector": ".has_hidden_child", "style": {"background-color": "red", "line-color": "red"}},
         {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
         {"selector": "label", "style": {"color": "#0095FF"}},

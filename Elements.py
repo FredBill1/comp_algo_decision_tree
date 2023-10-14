@@ -16,20 +16,16 @@ from sorting_algorithms import sorting_algorithms
 class ElementNode:
     def __init__(self, id: int, full_label: str) -> None:
         self.id = id
-        self.data = dict(
-            id=str(id),
-            full_label=full_label,
-            cropped_label=full_label[: LABEL_MAX_LENGTH - 3] + "..." if len(full_label) > LABEL_MAX_LENGTH else full_label,
-        )
+        self.full_label = full_label
+        self.cropped_label = self.full_label[: LABEL_MAX_LENGTH - 3] + "..." if len(self.full_label) > LABEL_MAX_LENGTH else self.full_label
         self.edge_data: Optional[dict] = None
         self.left: Optional[ElementNode] = None
         self.right: Optional[ElementNode] = None
 
-    @property
-    def node_data(self) -> dict:
-        return {"data": dict(self.data)}
+    def node_data(self, show_full_labels: bool, classes: str) -> dict:
+        return {"data": {"id": str(self.id), "label": self.full_label if show_full_labels else self.cropped_label}, "classes": classes}
 
-    __slots__ = ["id", "data", "edge_data", "left", "right"]
+    __slots__ = ["id", "full_label", "cropped_label", "edge_data", "left", "right"]
 
 
 class ElementHolder:
@@ -156,17 +152,12 @@ class Elements:
         self.visiblity_state = np.array(elem, dtype=np.int32)
         return tot < MAX_ELEMENTS
 
-    def visible_elements(self) -> list[dict]:
+    def visible_elements(self, show_full_labels: bool) -> list[dict]:
         ret = []
         for id in self.visiblity_state:
             node: ElementNode = self.element_holder.element_nodes[id]
-            node_data = node.node_data
-            if self.node_is_leaf(id):
-                node_data["classes"] = "is_leaf"
-            elif self.node_has_hidden_child(id):
-                node_data["classes"] = "has_hidden_child"
-            else:
-                node_data["classes"] = ""
+            classes = "is_leaf" if self.node_is_leaf(id) else "has_hidden_child" if self.node_has_hidden_child(id) else ""
+            node_data = node.node_data(show_full_labels, classes)
             ret.append(node_data)
             if node.edge_data is not None:
                 ret.append(node.edge_data)
