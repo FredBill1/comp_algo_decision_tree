@@ -14,63 +14,21 @@ from sorting_algorithms import sorting_algorithms
 
 
 @callback(
-    Output("user-state", "data", allow_duplicate=True),
-    Input("cytoscape", "tapNode"),
-    State("user-state", "data"),
-    prevent_initial_call=True,
-)
-def on_tap_node(node: Optional[dict], user_state: dict):
-    elements = Elements(**user_state)
-    elements.on_tap_node(int(node["data"]["id"]))
-    user_state["visiblity_state"] = elements.get_visiblity_state()
-    return user_state
-
-
-@callback(
-    Output("user-state", "data", allow_duplicate=True),
-    Output("notifications-container", "children"),
-    Input("expand-all", "n_clicks"),
-    State("user-state", "data"),
-    prevent_initial_call=True,
-)
-def on_expand_all(_: int, user_state: dict):
-    elements = Elements(**user_state)
-    notification = ""
-    if not elements.expand_all():
-        notification = dmc.Notification(
-            id="warning-notification",
-            title="Warning",
-            action="show",
-            message=f"Too many elements, only {MAX_ELEMENTS} elements are displayed.",
-            icon=DashIconify(icon="material-symbols:warning"),
-        )
-    user_state["visiblity_state"] = elements.get_visiblity_state()
-    return [user_state, notification]
-
-
-@callback(
-    Output("user-state", "data", allow_duplicate=True),
-    Input("reset", "n_clicks"),
-    State("user-state", "data"),
-    prevent_initial_call=True,
-)
-def on_reset(_: int, user_state: dict):
-    user_state["visiblity_state"] = None
-    return user_state
-
-
-@callback(
     Output("user-state", "data"),
     Output("cytoscape", "elements"),
     Output("cytoscape", "stylesheet"),
     Output("sorting-algorithm", "value"),
     Output("input-N", "value"),
     Output("show-full-labels", "value"),
+    Output("notifications-container", "children"),
     Output("control-loading-output", "children"),
     Input("user-state", "data"),
     Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
     Input("show-full-labels", "value"),
+    Input("cytoscape", "tapNode"),
+    Input("expand-all", "n_clicks"),
+    Input("reset", "n_clicks"),
     State("cytoscape", "stylesheet"),
 )
 def on_data(
@@ -78,10 +36,14 @@ def on_data(
     input_sorting_algorithm_i: str,
     input_N: str,
     show_full_labels: list,
+    node: Optional[dict],
+    _expand_all: int,
+    _reset: int,
     stylesheet: list[dict],
 ):
     if not user_state:
         user_state = DEFAULT_USER_STATE
+    notification = ""
 
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if trigger_id == "sorting-algorithm":
@@ -90,16 +52,30 @@ def on_data(
         user_state["N"] = int(input_N)
     elif trigger_id == "show-full-labels":
         user_state["show_full_labels"] = bool(show_full_labels)
-    if trigger_id in ("sorting-algorithm", "input-N"):
+    if trigger_id in ("sorting-algorithm", "input-N", "reset"):
         user_state["visiblity_state"] = None
 
-    sorting_algorithm_i, N, show_full_labels = user_state["sorting_algorithm_i"], user_state["N"], user_state["show_full_labels"]
     elements = Elements(**user_state)
+    if trigger_id == "cytoscape":
+        elements.on_tap_node(int(node["data"]["id"]))
+    elif trigger_id == "expand-all":
+        if not elements.expand_all():
+            notification = dmc.Notification(
+                id="warning-notification",
+                title="Warning",
+                action="show",
+                message=f"Too many elements, only {MAX_ELEMENTS} elements are displayed.",
+                icon=DashIconify(icon="material-symbols:warning"),
+            )
+    if trigger_id in ("cytoscape", "expand-all"):
+        user_state["visiblity_state"] = elements.get_visiblity_state()
+
+    sorting_algorithm_i, N, show_full_labels = user_state["sorting_algorithm_i"], user_state["N"], user_state["show_full_labels"]
     for rule in stylesheet:
         if rule["selector"] == "node":
             rule["style"]["label"] = "data(full_label)" if show_full_labels else "data(cropped_label)"
             break
-    return [user_state, elements.visible_elements(), stylesheet, str(sorting_algorithm_i), str(N), [0] if show_full_labels else [], ""]
+    return [user_state, elements.visible_elements(), stylesheet, str(sorting_algorithm_i), str(N), [0] if show_full_labels else [], notification, ""]
 
 
 @callback(
