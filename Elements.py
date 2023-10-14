@@ -1,6 +1,6 @@
 import base64
 import zlib
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Callable
 from threading import Lock
 from typing import Optional
@@ -29,7 +29,14 @@ class ElementNode:
 
 
 class ElementHolder:
-    def __init__(self, sorting_func: Callable[[list], None], N: int) -> None:
+    def __init__(self) -> None:
+        self.lock = Lock()
+        self.element_nodes = None
+
+    def initialized(self) -> bool:
+        return self.element_nodes is not None
+
+    def initialize(self, sorting_func: Callable[[list], None], N: int) -> None:
         tree_node, self.operation_cnts = decision_tree(sorting_func, N)
 
         self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_arr() + " " + tree_node.get_actuals())]
@@ -50,11 +57,11 @@ class ElementHolder:
                     element_node.left = child_element_node
                 Q.append((child, child_element_node))
 
-    __slots__ = ["element_nodes", "operation_cnts"]
+    __slots__ = ["lock", "element_nodes", "operation_cnts"]
 
 
 class Elements:
-    cached: dict[tuple[int, int], ElementHolder] = {}
+    cached: defaultdict[tuple[int, int], ElementHolder] = defaultdict(ElementHolder)
     cached_lock = Lock()
 
     def __init__(self, sorting_algorithm_i: int, N: int, visiblity_state: Optional[str], **kwargs) -> None:
@@ -67,11 +74,15 @@ class Elements:
 
     @classmethod
     def get_element_holder(cls, sorting_algorithm_i: int, N: int, **kwargs) -> ElementHolder:
-        key = (sorting_algorithm_i, N)
         with cls.cached_lock:
-            if key not in cls.cached:
-                cls.cached[key] = ElementHolder(sorting_algorithms[sorting_algorithm_i][1], N)
-            return cls.cached[key]
+            element_holder = cls.cached[(sorting_algorithm_i, N)]
+        with element_holder.lock:
+            if not element_holder.initialized():
+                name, func = sorting_algorithms[sorting_algorithm_i]
+                print(f"init: `{name}` with {N} elements")
+                element_holder.initialize(func, N)
+                print(f"fin:  `{name}` with {N} elements")
+        return element_holder
 
     def get_visiblity_state(self) -> str:
         return self.encode_visiblity(self.visiblity_state)
