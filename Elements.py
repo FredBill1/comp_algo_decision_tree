@@ -102,7 +102,7 @@ class Elements:
     def expand_children(self, id: int) -> None:
         update: list[int] = []
         Q = deque([self.element_holder.element_nodes[id]])
-        depth = 0
+        depth = 1
         while Q:
             for _ in range(len(Q)):
                 node = Q.popleft()
