@@ -38,24 +38,24 @@ class ElementHolder:
 
         root, self.operation_cnts = decision_tree(sorting_func, N)
 
-        Q: deque[tuple[DecisionTreeNode, Optional[ElementNode], Optional[bool], Optional[str]]] = deque([(root, None, None, None)])
+        Q: deque[tuple[DecisionTreeNode, Optional[ElementNode], Optional[int], Optional[str]]] = deque([(root, None, None, None)])
         while Q:
-            node, parent, is_left, cmp_op = Q.popleft()
+            node, parent, is_right, cmp_op = Q.popleft()
             element_node = ElementNode(len(self.element_nodes), node.get_arr() + " " + node.get_actuals())
             self.element_nodes.append(element_node)
             if parent is not None:
                 element_node.edge_data = {"data": dict(source=str(parent.id), target=str(element_node.id), cmp_op=cmp_op)}
-                if is_left:
-                    parent.left = element_node
-                else:
+                if is_right:
                     parent.right = element_node
+                else:
+                    parent.left = element_node
 
             if node.cmp_xy is None:
                 continue
             x, y = [chr(ord("a") + x) for x in node.cmp_xy]
             for is_right, (op, child) in enumerate(zip("<>", [node.left, node.right])):
                 if child is not None:
-                    Q.append((child, element_node, not is_right, f"{x}{op}{y}"))
+                    Q.append((child, element_node, is_right, f"{x}{op}{y}"))
 
     __slots__ = ["element_nodes", "operation_cnts"]
 
