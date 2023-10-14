@@ -6,6 +6,7 @@ import dash_cytoscape as cyto
 import dash_mantine_components as dmc
 import plotly.express as px
 from dash import Dash, Input, Output, State, callback, ctx, dash_table, dcc, html
+from dash.exceptions import PreventUpdate
 from dash_iconify import DashIconify
 
 from Config import *
@@ -32,7 +33,7 @@ from sorting_algorithms import sorting_algorithms
 def on_data(
     user_state: dict,
     input_sorting_algorithm_i: str,
-    input_N: str,
+    input_N: Optional[str],
     show_full_labels: list,
     node: Optional[dict],
     _expand_all: int,
@@ -46,6 +47,8 @@ def on_data(
     if trigger_id == "sorting-algorithm":
         user_state["sorting_algorithm_i"] = int(input_sorting_algorithm_i)
     elif trigger_id == "input-N":
+        if input_N is None:
+            raise PreventUpdate
         user_state["N"] = int(input_N)
     elif trigger_id == "show-full-labels":
         user_state["show_full_labels"] = bool(show_full_labels)
@@ -139,7 +142,7 @@ control_panel = html.Div(
         dbc.Row(
             [
                 f"N({N_RANGE[0]}~{N_RANGE[1]}):",
-                dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}),
+                dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}, debounce=True),
             ],
             style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
         ),
@@ -208,6 +211,7 @@ app.layout = dmc.NotificationsProvider(
         style={"height": "90vh", "width": "98vw", "margin": "auto"},
     )
 )
+server = app.server
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)

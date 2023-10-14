@@ -11,5 +11,5 @@ pip install -r requirements.txt
 ## Run
 
 ```bash
-python main.py
+waitress-serve --listen=127.0.0.1:8000 'app:server'
 ```

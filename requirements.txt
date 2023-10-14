@@ -6,3 +6,4 @@ dash-mantine-components
 numpy
 pandas
 sortednp
+waitress
