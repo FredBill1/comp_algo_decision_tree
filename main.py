@@ -82,6 +82,7 @@ def on_data(
 @callback(
     Output("code-modal", "is_open"),
     Output("code-modal", "children"),
+    Output("control-loading-output", "children", allow_duplicate=True),
     Input("show-code", "n_clicks"),
     State("code-modal", "is_open"),
     State("user-state", "data"),
@@ -96,13 +97,14 @@ def on_show_code(_: int, is_open: bool, user_state: dict):
         dbc.ModalHeader(dbc.ModalTitle(sorting_algorithms[sorting_algorithm_i][0])),
         dbc.ModalBody(dcc.Markdown(f"```python\n{code}\n```"), style={"margin": "auto"}),
     ]
-    return [True, children]
+    return [True, children, ""]
 
 
 @callback(
     Output("statistics-modal", "is_open"),
     Output("statistics-graph", "figure"),
     Output("statistics-table", "data"),
+    Output("control-loading-output", "children", allow_duplicate=True),
     Input("show-statistics", "n_clicks"),
     State("statistics-modal", "is_open"),
     State("user-state", "data"),
@@ -115,7 +117,7 @@ def on_show_statics(_: int, is_open: bool, user_state: dict):
     data = element_holder.operation_cnts
     fig = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
     fig.layout.update(showlegend=False)
-    return [True, fig, [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}]]
+    return [True, fig, [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}], ""]
 
 
 control_panel = html.Div(
