@@ -14,14 +14,14 @@ from sorting_algorithms import sorting_algorithms
 
 
 class ElementNode:
-    def __init__(self, id: int, full_label: str, edge_data: Optional[dict]) -> None:
+    def __init__(self, id: int, full_label: str) -> None:
         self.id = id
         self.data = dict(
             id=str(id),
             full_label=full_label,
             cropped_label=full_label[: LABEL_MAX_LENGTH - 3] + "..." if len(full_label) > LABEL_MAX_LENGTH else full_label,
         )
-        self.edge_data = edge_data
+        self.edge_data: Optional[dict] = None
         self.left: Optional[ElementNode] = None
         self.right: Optional[ElementNode] = None
 
@@ -38,15 +38,10 @@ class ElementHolder:
 
         root, self.operation_cnts = decision_tree(sorting_func, N)
 
-        def dfs(
-            node: DecisionTreeNode,
-            parent: Optional[ElementNode] = None,
-            edge_data: Optional[dict] = None,
-            is_left: bool = False,
-            cmp_op: Optional[str] = None,
-            depth: int = 0,
-        ) -> None:
-            element_node = ElementNode(len(self.element_nodes), node.get_arr() + " " + node.get_actuals(), edge_data)
+        Q: deque[tuple[DecisionTreeNode, Optional[ElementNode], Optional[bool], Optional[str]]] = deque([(root, None, None, None)])
+        while Q:
+            node, parent, is_left, cmp_op = Q.popleft()
+            element_node = ElementNode(len(self.element_nodes), node.get_arr() + " " + node.get_actuals())
             self.element_nodes.append(element_node)
             if parent is not None:
                 element_node.edge_data = {"data": dict(source=str(parent.id), target=str(element_node.id), cmp_op=cmp_op)}
@@ -56,14 +51,13 @@ class ElementHolder:
                     parent.right = element_node
 
             if node.cmp_xy is None:
-                return
+                continue
             x, y = [chr(ord("a") + x) for x in node.cmp_xy]
-            for op, child in zip("<>", [node.left, node.right]):
+            for is_right, (op, child) in enumerate(zip("<>", [node.left, node.right])):
                 if child is not None:
-                    is_left = op == "<"
-                    dfs(child, element_node, edge_data, is_left, f"{x}{op}{y}", depth + 1)
+                    Q.append((child, element_node, not is_right, f"{x}{op}{y}"))
 
-        dfs(root)
+    __slots__ = ["element_nodes", "operation_cnts"]
 
 
 class Elements:
@@ -114,33 +108,35 @@ class Elements:
 
     def expand_childs(self, id: int) -> None:
         update: list[int] = []
-
-        def dfs(node: ElementNode, depth: int) -> None:
-            for child in (node.left, node.right):
-                if child is not None:
-                    if not self.node_visiblity(child.id):
+        Q = deque([self.element_holder.element_nodes[id]])
+        depth = 0
+        while Q:
+            for _ in range(len(Q)):
+                node = Q.popleft()
+                for child in (node.left, node.right):
+                    if child is not None:
                         update.append(child.id)
-                    if depth < DISPLAY_DEPTH:
-                        dfs(child, depth + 1)
-
-        dfs(self.element_holder.element_nodes[id], 1)
-        self.visiblity_state = snp.merge(self.visiblity_state, np.array(update, dtype=np.int32))
+                        if depth < DISPLAY_DEPTH:
+                            Q.append(child)
+            depth += 1
+        self.visiblity_state = snp.merge(self.visiblity_state, np.array(update, dtype=np.int32), duplicates=snp.DROP)
 
     def hide_childs(self, id: int) -> None:
         deletes: list[int] = []
-
-        def dfs(node: ElementNode) -> None:
+        Q = deque([self.element_holder.element_nodes[id]])
+        while Q:
+            node = Q.popleft()
             for child in (node.left, node.right):
                 if child is not None:
                     i = self.visiblity_state.searchsorted(child.id)
                     if i < len(self.visiblity_state) and self.visiblity_state[i] == child.id:
                         deletes.append(i)
-                        dfs(child)
-
-        dfs(self.element_holder.element_nodes[id])
+                        Q.append(child)
         self.visiblity_state = np.delete(self.visiblity_state, deletes)
 
     def on_tap_node(self, id: int) -> None:
+        if self.node_is_leaf(id):
+            return
         if self.node_has_hidden_child(id):
             self.expand_childs(id)
         else:
@@ -158,7 +154,6 @@ class Elements:
                     tot += 1
                     Q.append(child)
         self.visiblity_state = np.array(elem, dtype=np.int32)
-        self.visiblity_state.sort()
         return tot < MAX_ELEMENTS
 
     def visible_elements(self) -> list[dict]:
