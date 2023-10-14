@@ -91,11 +91,11 @@ class Elements:
 
     @staticmethod
     def encode_visiblity(visiblity: np.ndarray) -> str:
-        return base64.b64encode(zlib.compress(visiblity.tobytes())).decode()
+        return base64.b64encode(zlib.compress(np.diff(visiblity, prepend=0).tobytes())).decode()
 
     @staticmethod
     def decode_visiblity(visiblity: str) -> np.ndarray:
-        return np.frombuffer(zlib.decompress(base64.b64decode(visiblity)), dtype=np.int32)
+        return np.cumsum(np.frombuffer(zlib.decompress(base64.b64decode(visiblity)), dtype=np.int32))
 
     def node_visiblity(self, id: int) -> bool:
         i = self.visiblity_state.searchsorted(id)
