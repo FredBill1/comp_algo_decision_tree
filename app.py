@@ -57,14 +57,28 @@ def on_data(
     return [elements.get_visiblity_state(), elements.visible_elements(bool(show_full_labels)), notification, []]
 
 
+@callback(Output("input-N", "invalid"), Input("input-N", "value"))
+def on_input_N_invalid(input_N: Optional[str]):
+    return input_N is None
+
+
 @callback(
-    Output("input-N", "invalid"),
+    Output("progress", "value"),
+    Output("progress", "max"),
+    Output("progress", "animated"),
+    Output("progress-interval", "disabled"),
     Output("show-statistics", "disabled"),
+    Input("progress-interval", "n_intervals"),
+    Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
 )
-def on_input_N_invalid(input_N: Optional[str]):
-    disabled = input_N is None
-    return [disabled, disabled]
+def on_progress(_n_intervals: int, sorting_algorithm_i: str, input_N: Optional[str]):
+    if input_N is None:
+        return [0, 1, False, True, True]
+    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
+    i, total = element_holder.get_progress()
+    finished = i == total
+    return [str(i), str(total), not finished, finished, not finished]
 
 
 @callback(
@@ -109,24 +123,6 @@ def on_show_statics(_: int, is_open: bool, sorting_algorithm_i: str, input_N: Op
     fig = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
     fig.layout.update(showlegend=False)
     return [True, fig, [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}], ""]
-
-
-@callback(
-    Output("progress", "value"),
-    Output("progress", "max"),
-    Output("progress", "animated"),
-    Output("progress-interval", "disabled"),
-    Input("progress-interval", "n_intervals"),
-    Input("sorting-algorithm", "value"),
-    Input("input-N", "value"),
-)
-def on_progress(_n_intervals: int, sorting_algorithm_i: str, input_N: Optional[str]):
-    if input_N is None:
-        raise PreventUpdate
-    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
-    i, total = element_holder.get_progress()
-    finished = i == total
-    return [str(i), str(total), not finished, finished]
 
 
 control_panel = html.Div(

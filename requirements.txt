@@ -1,3 +1,4 @@
+atomics
 dash
 dash-bootstrap-components
 dash-cytoscape
