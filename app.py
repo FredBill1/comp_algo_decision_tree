@@ -15,14 +15,11 @@ from sorting_algorithms import sorting_algorithms
 
 
 @callback(
-    Output("user-state", "data"),
+    Output("visiblity-state", "data"),
     Output("cytoscape", "elements"),
-    Output("sorting-algorithm", "value"),
-    Output("input-N", "value"),
-    Output("show-full-labels", "value"),
     Output("notifications-container", "children"),
     Output("control-loading-output", "children"),
-    Input("user-state", "data"),
+    Input("visiblity-state", "data"),
     Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
     Input("show-full-labels", "value"),
@@ -31,31 +28,21 @@ from sorting_algorithms import sorting_algorithms
     Input("reset", "n_clicks"),
 )
 def on_data(
-    user_state: dict,
-    input_sorting_algorithm_i: str,
+    visiblity_state: Optional[str],
+    sorting_algorithm_i: str,
     input_N: Optional[str],
     show_full_labels: list,
-    node: Optional[dict],
+    node: dict,
     _expand_all: int,
     _reset: int,
 ):
-    if not user_state:
-        user_state = DEFAULT_USER_STATE
-    notification = ""
-
+    if input_N is None:
+        return [None, [], [], []]
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    if trigger_id == "sorting-algorithm":
-        user_state["sorting_algorithm_i"] = int(input_sorting_algorithm_i)
-    elif trigger_id == "input-N":
-        if input_N is None:
-            raise PreventUpdate
-        user_state["N"] = int(input_N)
-    elif trigger_id == "show-full-labels":
-        user_state["show_full_labels"] = bool(show_full_labels)
     if trigger_id in ("sorting-algorithm", "input-N", "reset"):
-        user_state["visiblity_state"] = None
-
-    elements = Elements(**user_state)
+        visiblity_state = None
+    elements = Elements(int(sorting_algorithm_i), int(input_N), visiblity_state)
+    notification = ""
     if trigger_id == "cytoscape":
         elements.on_tap_node(int(node["data"]["id"]))
     elif trigger_id == "expand-all":
@@ -67,19 +54,17 @@ def on_data(
                 message=f"Too many elements, only {MAX_ELEMENTS} elements are displayed.",
                 icon=DashIconify(icon="material-symbols:warning"),
             )
-    if trigger_id in ("cytoscape", "expand-all"):
-        user_state["visiblity_state"] = elements.get_visiblity_state()
+    return [elements.get_visiblity_state(), elements.visible_elements(bool(show_full_labels)), notification, []]
 
-    sorting_algorithm_i, N, show_full_labels = user_state["sorting_algorithm_i"], user_state["N"], user_state["show_full_labels"]
-    return [
-        user_state,
-        elements.visible_elements(show_full_labels),
-        str(sorting_algorithm_i),
-        str(N),
-        [0] if show_full_labels else [],
-        notification,
-        "",
-    ]
+
+@callback(
+    Output("input-N", "invalid"),
+    Output("show-statistics", "disabled"),
+    Input("input-N", "value"),
+)
+def on_input_N_invalid(input_N: Optional[str]):
+    disabled = input_N is None
+    return [disabled, disabled]
 
 
 @callback(
@@ -88,13 +73,13 @@ def on_data(
     Output("control-loading-output", "children", allow_duplicate=True),
     Input("show-code", "n_clicks"),
     State("code-modal", "is_open"),
-    State("user-state", "data"),
+    State("sorting-algorithm", "value"),
     prevent_initial_call=True,
 )
-def on_show_code(_: int, is_open: bool, user_state: dict):
+def on_show_code(_: int, is_open: bool, sorting_algorithm_i: str):
     if is_open:
         return [False, []]
-    sorting_algorithm_i = user_state["sorting_algorithm_i"]
+    sorting_algorithm_i = int(sorting_algorithm_i)
     code = inspect.getsource(sorting_algorithms[sorting_algorithm_i][1]).strip()
     children = [
         dbc.ModalHeader(dbc.ModalTitle(sorting_algorithms[sorting_algorithm_i][0])),
@@ -110,13 +95,16 @@ def on_show_code(_: int, is_open: bool, user_state: dict):
     Output("control-loading-output", "children", allow_duplicate=True),
     Input("show-statistics", "n_clicks"),
     State("statistics-modal", "is_open"),
-    State("user-state", "data"),
+    State("sorting-algorithm", "value"),
+    State("input-N", "value"),
     prevent_initial_call=True,
 )
-def on_show_statics(_: int, is_open: bool, user_state: dict):
+def on_show_statics(_: int, is_open: bool, sorting_algorithm_i: str, input_N: Optional[str]):
     if is_open:
         return [False, {}, []]
-    element_holder = Elements.get_element_holder(**user_state)
+    if input_N is None:
+        raise PreventUpdate
+    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N))
     data = element_holder.operation_cnts
     fig = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
     fig.layout.update(showlegend=False)
@@ -134,6 +122,9 @@ control_panel = html.Div(
                     options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
                     id="sorting-algorithm",
                     style={"width": "12rem"},
+                    value=str(SORTING_ALGORITHM_I),
+                    persistence=True,
+                    persistence_type=USER_STATE_STORAGE_TYPE,
                 ),
             ],
             style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
@@ -142,13 +133,32 @@ control_panel = html.Div(
         dbc.Row(
             [
                 f"N({N_RANGE[0]}~{N_RANGE[1]}):",
-                dbc.Input(id="input-N", type="number", min=N_RANGE[0], max=N_RANGE[1], step=1, style={"width": "4rem"}, debounce=True),
+                dbc.Input(
+                    id="input-N",
+                    type="number",
+                    min=N_RANGE[0],
+                    max=N_RANGE[1],
+                    step=1,
+                    style={"width": "5rem"},
+                    debounce=True,
+                    value=INPUT_N,
+                    persistence=True,
+                    persistence_type=USER_STATE_STORAGE_TYPE,
+                ),
             ],
             style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
         ),
         # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
         dbc.Button("Show Statistics", id="show-statistics"),
-        dbc.Checklist(options=[{"label": "Show Full Labels", "value": 0}], id="show-full-labels", value=[], switch=True, inline=True),
+        dbc.Checklist(
+            options=[{"label": "Show Full Labels", "value": 0}],
+            id="show-full-labels",
+            value=[0] if SHOW_FULL_LABELS else [],
+            switch=True,
+            inline=True,
+            persistence=True,
+            persistence_type=USER_STATE_STORAGE_TYPE,
+        ),
         dcc.Loading(id="control-loading", type="default", children=html.Div(id="control-loading-output")),
     ],
     style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
@@ -193,7 +203,7 @@ statistics_modal = dbc.Modal(
         ),
     ],
 )
-user_state = dcc.Store(id="user-state", storage_type=USER_STATE_STORAGE_TYPE)
+visiblity_state = dcc.Store(id="visiblity-state", storage_type=USER_STATE_STORAGE_TYPE)
 
 app = Dash(
     __name__,
@@ -207,7 +217,7 @@ app = Dash(
 )
 app.layout = dmc.NotificationsProvider(
     html.Div(
-        [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal, statistics_modal, user_state],
+        [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal, statistics_modal, visiblity_state],
         style={"height": "90vh", "width": "98vw", "margin": "auto"},
     )
 )
