@@ -2,7 +2,6 @@ import base64
 import zlib
 from collections import defaultdict, deque
 from collections.abc import Callable
-from math import factorial
 from threading import Lock
 from typing import Optional
 
@@ -13,7 +12,6 @@ import sortednp as snp
 from Config import *
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import sorting_algorithms
-from functools import partial
 
 
 class ElementNode:
@@ -35,21 +33,25 @@ class ElementHolder:
     def __init__(self) -> None:
         self.lock = Lock()
         self.element_nodes = None
-        self.progress = atomics.atomic(4, atomics.INT)
-        self.total = 1
+        self.progress = atomics.atomic(8, atomics.INT)
+        self.set_progress(0, 1)
 
     def get_progress(self) -> tuple[int, int]:
-        return self.progress.load(atomics.MemoryOrder.RELAXED), self.total
+        x = self.progress.load(atomics.MemoryOrder.RELAXED)
+        return x >> 32, x & 0xFFFFFFFF
+
+    def set_progress(self, i: int, total: int):
+        self.progress.store((i << 32) | total, atomics.MemoryOrder.RELAXED)
 
     def initialized(self) -> bool:
         return self.element_nodes is not None
 
     def initialize(self, sorting_func: Callable[[list], None], N: int) -> None:
-        self.total = factorial(N)
-        tree_node, self.operation_cnts = decision_tree(sorting_func, N, partial(self.progress.store, order=atomics.MemoryOrder.RELAXED))
+        tree_node, self.operation_cnts, node_cnt = decision_tree(sorting_func, N, self.set_progress)
 
         self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_arr() + " " + tree_node.get_actuals())]
         Q: deque[tuple[DecisionTreeNode, ElementNode]] = deque([(tree_node, element_node)])
+        self.set_progress(1, node_cnt)
         while Q:
             tree_node, element_node = Q.popleft()
             if tree_node.cmp_xy is None:  # leaf node
@@ -60,13 +62,14 @@ class ElementHolder:
                     continue
                 child_element_node = ElementNode(len(self.element_nodes), child.get_arr() + " " + child.get_actuals(), element_node.id, f"{x}{op}{y}")
                 self.element_nodes.append(child_element_node)
+                self.set_progress(len(self.element_nodes), node_cnt)
                 if is_right:
                     element_node.right = child_element_node
                 else:
                     element_node.left = child_element_node
                 Q.append((child, child_element_node))
 
-    __slots__ = ["lock", "element_nodes", "operation_cnts", "progress", "total"]
+    __slots__ = ["lock", "element_nodes", "operation_cnts", "progress"]
 
 
 class Elements:

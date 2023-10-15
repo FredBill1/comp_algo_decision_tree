@@ -35,9 +35,10 @@ class InvalidSortingAlgorithmError(Exception):
 
 
 def decision_tree(
-    sorting_func: Callable[[list], None], N: int, callback: Optional[Callable[[int], None]] = None
+    sorting_func: Callable[[list], None], N: int, callback: Optional[Callable[[int, int], None]] = None
 ) -> tuple[DecisionTreeNode, np.ndarray]:
     root = DecisionTreeNode()
+    node_cnt = 1
 
     def cmp(x: int, y: int) -> int:
         if x > y:
@@ -55,9 +56,12 @@ def decision_tree(
         """
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
-    operation_cnts = np.zeros(factorial(N), dtype=np.int32)
+    TOTAL = factorial(N)
+    operation_cnts = np.zeros(TOTAL, dtype=np.int32)
     key = cmp_to_key(cmp)
     for I, actual in enumerate(permutations(range(1, N + 1))):
+        if callback is not None:
+            callback(I, TOTAL)
         arrs = []
         cmp_xys = []
         arr = [(key(x), x) for x in range(N)]
@@ -88,15 +92,15 @@ def decision_tree(
             if cmp_xy[2]:  # x < y
                 if node.left is None:
                     node.left = DecisionTreeNode()
+                    node_cnt += 1
                 node = node.left
             else:
                 if node.right is None:
                     node.right = DecisionTreeNode()
+                    node_cnt += 1
                 node = node.right
-        if callback is not None:
-            callback(I + 1)
 
-    return root, operation_cnts
+    return root, operation_cnts, node_cnt
 
 
 def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
@@ -114,7 +118,7 @@ if __name__ == "__main__":
     from sorting_algorithms import *
 
     N = 3
-    tree, operation_cnts = decision_tree(bubble_sort, N)
+    tree, operation_cnts, node_cnt = decision_tree(bubble_sort, N)
     # tree = decision_tree(quick_sort, N)
     # tree = decision_tree(LomutoQS, N)
     # tree = decision_tree(merge_sort, N)
