@@ -66,6 +66,7 @@ def on_input_N_invalid(input_N: Optional[str]):
     Output("progress", "value"),
     Output("progress", "max"),
     Output("progress", "animated"),
+    Output("progress", "label"),
     Output("progress-interval", "disabled"),
     Output("show-statistics", "disabled"),
     Input("progress-interval", "n_intervals"),
@@ -74,11 +75,11 @@ def on_input_N_invalid(input_N: Optional[str]):
 )
 def on_progress(_n_intervals: int, sorting_algorithm_i: str, input_N: Optional[str]):
     if input_N is None:
-        return [0, 1, False, True, True]
+        return [0, 1, False, "", True, True]
     element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
     i, total = element_holder.get_progress()
     finished = i == total
-    return [str(i), str(total), not finished, finished, not finished]
+    return [str(i), str(total), not finished, f"{i}/{total}", finished, not finished]
 
 
 @callback(
@@ -162,7 +163,7 @@ control_panel = html.Div(
             ],
             style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
         ),
-        dbc.Progress(id="progress", value=0, striped=True, animated=True, style={"width": "10rem"}),
+        dbc.Progress(id="progress", value=0, striped=True, animated=True, style={"width": "10rem", "height": "1.3rem"}),
         dcc.Interval(id="progress-interval", interval=200, n_intervals=0, disabled=True),
         dbc.Button("Show Statistics", id="show-statistics"),
         dbc.Checklist(  # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead

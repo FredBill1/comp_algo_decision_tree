@@ -18,7 +18,7 @@ class ElementNode:
     def __init__(self, id: int, full_label: str, parent_id: Optional[int] = None, cmp_op: Optional[str] = None) -> None:
         self.id = id
         self.full_label = full_label
-        self.cropped_label = self.full_label[: LABEL_MAX_LENGTH - 3] + "..." if len(self.full_label) > LABEL_MAX_LENGTH else self.full_label
+        self.cropped_label = self.full_label[: LABEL_CROP_LENGTH - 3] + "..." if len(self.full_label) > LABEL_CROP_LENGTH else self.full_label
         self.edge_data: Optional[dict] = None if parent_id is None else {"data": dict(source=str(parent_id), target=str(id), cmp_op=cmp_op)}
         self.left: Optional[ElementNode] = None
         self.right: Optional[ElementNode] = None
@@ -49,7 +49,7 @@ class ElementHolder:
     def initialize(self, sorting_func: Callable[[list], None], N: int) -> None:
         tree_node, self.operation_cnts, node_cnt = decision_tree(sorting_func, N, self.set_progress)
 
-        self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_arr() + " " + tree_node.get_actuals())]
+        self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_label())]
         Q: deque[tuple[DecisionTreeNode, ElementNode]] = deque([(tree_node, element_node)])
         self.set_progress(1, node_cnt)
         while Q:
@@ -60,7 +60,7 @@ class ElementHolder:
             for is_right, (op, child) in enumerate(zip("<>", [tree_node.left, tree_node.right])):
                 if child is None:
                     continue
-                child_element_node = ElementNode(len(self.element_nodes), child.get_arr() + " " + child.get_actuals(), element_node.id, f"{x}{op}{y}")
+                child_element_node = ElementNode(len(self.element_nodes), child.get_label(), element_node.id, f"{x}{op}{y}")
                 self.element_nodes.append(child_element_node)
                 self.set_progress(len(self.element_nodes), node_cnt)
                 if is_right:

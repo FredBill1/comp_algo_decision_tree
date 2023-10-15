@@ -6,6 +6,8 @@ from typing import Optional
 
 import numpy as np
 
+from Config import *
+
 
 class DecisionTreeNode:
     def __init__(self) -> None:
@@ -14,6 +16,16 @@ class DecisionTreeNode:
         self.actuals: list[list[int]] = []
         self.left: Optional[DecisionTreeNode] = None
         self.right: Optional[DecisionTreeNode] = None
+
+    def get_label(self) -> str:
+        ret = [self.get_arr()]
+        tot_len = len(ret[0])
+        for actual in self.actuals:
+            ret.append(f" ({','.join(map(str, actual))})")
+            tot_len += len(ret[-1])
+            if tot_len >= LABEL_MAX_LENGTH:
+                return "".join(ret)[: LABEL_MAX_LENGTH - 3] + "..."
+        return "".join(ret)
 
     def get_arr(self) -> str:
         return "(" + ",".join(chr(ord("a") + x) for x in self.arr) + ")"
@@ -78,7 +90,8 @@ def decision_tree(
                 node.arr = arr
             elif node.arr != arr:
                 raise NonDeterministicError
-            node.actuals.append(actual)
+            if len(node.actuals) < ACTUALS_MAX_LENGTH:
+                node.actuals.append(actual)
 
             if cmp_xy is None:
                 if node.cmp_xy is not None:
