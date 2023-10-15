@@ -148,9 +148,8 @@ control_panel = html.Div(
             ],
             style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
         ),
-        # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
         dbc.Button("Show Statistics", id="show-statistics"),
-        dbc.Checklist(
+        dbc.Checklist(  # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
             options=[{"label": "Show Full Labels", "value": 0}],
             id="show-full-labels",
             value=[0] if SHOW_FULL_LABELS else [],
