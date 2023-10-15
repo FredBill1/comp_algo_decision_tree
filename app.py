@@ -111,6 +111,24 @@ def on_show_statics(_: int, is_open: bool, sorting_algorithm_i: str, input_N: Op
     return [True, fig, [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}], ""]
 
 
+@callback(
+    Output("progress", "value"),
+    Output("progress", "max"),
+    Output("progress", "animated"),
+    Output("progress-interval", "disabled"),
+    Input("progress-interval", "n_intervals"),
+    Input("sorting-algorithm", "value"),
+    Input("input-N", "value"),
+)
+def on_progress(_n_intervals: int, sorting_algorithm_i: str, input_N: Optional[str]):
+    if input_N is None:
+        raise PreventUpdate
+    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
+    i, total = element_holder.get_progress()
+    finished = i == total
+    return [str(i), str(total), not finished, finished]
+
+
 control_panel = html.Div(
     [
         dbc.Button("Expand All", id="expand-all"),
@@ -148,6 +166,8 @@ control_panel = html.Div(
             ],
             style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
         ),
+        dbc.Progress(id="progress", value=0, striped=True, animated=True, style={"width": "10rem"}),
+        dcc.Interval(id="progress-interval", interval=200, n_intervals=0, disabled=True),
         dbc.Button("Show Statistics", id="show-statistics"),
         dbc.Checklist(  # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
             options=[{"label": "Show Full Labels", "value": 0}],

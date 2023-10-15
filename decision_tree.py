@@ -34,7 +34,9 @@ class InvalidSortingAlgorithmError(Exception):
         super().__init__("Invalid sorting algorithm")
 
 
-def decision_tree(sorting_func: Callable[[list], None], N: int) -> tuple[DecisionTreeNode, np.ndarray]:
+def decision_tree(
+    sorting_func: Callable[[list], None], N: int, callback: Optional[Callable[[int], None]] = None
+) -> tuple[DecisionTreeNode, np.ndarray]:
     root = DecisionTreeNode()
 
     def cmp(x: int, y: int) -> int:
@@ -91,6 +93,8 @@ def decision_tree(sorting_func: Callable[[list], None], N: int) -> tuple[Decisio
                 if node.right is None:
                     node.right = DecisionTreeNode()
                 node = node.right
+        if callback is not None:
+            callback(I + 1)
 
     return root, operation_cnts
 

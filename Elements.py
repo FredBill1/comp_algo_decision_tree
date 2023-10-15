@@ -2,15 +2,18 @@ import base64
 import zlib
 from collections import defaultdict, deque
 from collections.abc import Callable
+from math import factorial
 from threading import Lock
 from typing import Optional
 
+import atomics
 import numpy as np
 import sortednp as snp
 
 from Config import *
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import sorting_algorithms
+from functools import partial
 
 
 class ElementNode:
@@ -32,12 +35,18 @@ class ElementHolder:
     def __init__(self) -> None:
         self.lock = Lock()
         self.element_nodes = None
+        self.progress = atomics.atomic(4, atomics.INT)
+        self.total = 1
+
+    def get_progress(self) -> tuple[int, int]:
+        return self.progress.load(atomics.MemoryOrder.RELAXED), self.total
 
     def initialized(self) -> bool:
         return self.element_nodes is not None
 
     def initialize(self, sorting_func: Callable[[list], None], N: int) -> None:
-        tree_node, self.operation_cnts = decision_tree(sorting_func, N)
+        self.total = factorial(N)
+        tree_node, self.operation_cnts = decision_tree(sorting_func, N, partial(self.progress.store, order=atomics.MemoryOrder.RELAXED))
 
         self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_arr() + " " + tree_node.get_actuals())]
         Q: deque[tuple[DecisionTreeNode, ElementNode]] = deque([(tree_node, element_node)])
@@ -57,7 +66,7 @@ class ElementHolder:
                     element_node.left = child_element_node
                 Q.append((child, child_element_node))
 
-    __slots__ = ["lock", "element_nodes", "operation_cnts"]
+    __slots__ = ["lock", "element_nodes", "operation_cnts", "progress", "total"]
 
 
 class Elements:
@@ -73,9 +82,11 @@ class Elements:
             self.expand_children(0)
 
     @classmethod
-    def get_element_holder(cls, sorting_algorithm_i: int, N: int, **kwargs) -> ElementHolder:
+    def get_element_holder(cls, sorting_algorithm_i: int, N: int, require_initialize: bool = True, **kwargs) -> ElementHolder:
         with cls.cached_lock:
             element_holder = cls.cached[(sorting_algorithm_i, N)]
+        if not require_initialize:
+            return element_holder
         with element_holder.lock:
             if not element_holder.initialized():
                 name, func = sorting_algorithms[sorting_algorithm_i]
