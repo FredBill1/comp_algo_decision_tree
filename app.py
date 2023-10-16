@@ -27,6 +27,8 @@ from sorting_algorithms import sorting_algorithms
     Output("visiblity-state", "data"),
     Output("cytoscape", "elements"),
     Output("notifications-container", "children"),
+    Output("control-loading", "style"),
+    Output("control-loading-output", "children"),
     Input("visiblity-state", "data"),
     Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
@@ -47,14 +49,14 @@ def on_data(
     _n_intervals: int,
 ):
     if input_N is None:
-        return [0, 1, False, "", True, True, True, True, None, [], []]
+        return [0, 1, False, "", True, True, True, True, None, [], [], {"visibility": "hidden"}, ""]
 
     element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
     i, total = element_holder.get_progress()
     if i != total:
         if not element_holder.get_and_set_initialize_scheduled():
             executor.submit(Elements.initialize_element_holder, element_holder, int(sorting_algorithm_i), int(input_N))
-        return [i, total, True, f"{i}/{total}", False, True, True, True, None, [], []]
+        return [i, total, True, f"{i}/{total}", False, True, True, True, None, [], [], {"visibility": "hidden"}, ""]
 
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if trigger_id in ("sorting-algorithm", "input-N", "reset"):
@@ -74,7 +76,7 @@ def on_data(
             )
     visiblity_state = elements.get_visiblity_state()
     visible_elements = elements.visible_elements(bool(show_full_labels))
-    return [i, total, False, f"{i}/{total}", True, False, False, False, visiblity_state, visible_elements, notification]
+    return [i, total, False, f"{i}/{total}", True, False, False, False, visiblity_state, visible_elements, notification, {}, ""]
 
 
 @callback(Output("input-N", "invalid"), Input("input-N", "value"))
@@ -128,8 +130,8 @@ def on_show_statics(_: int, is_open: bool, sorting_algorithm_i: str, input_N: Op
 
 control_panel = html.Div(
     [
-        dbc.Button("Expand All", id="expand-all"),
-        dbc.Button("Reset", id="reset"),
+        dbc.Button("Expand All", id="expand-all", disabled=True),
+        dbc.Button("Reset", id="reset", disabled=True),
         dbc.Row(
             [
                 "Sorting Algorithm:",
@@ -165,7 +167,7 @@ control_panel = html.Div(
         ),
         dbc.Progress(id="progress", value=0, striped=True, animated=True, style={"width": "10rem", "height": "1.3rem"}),
         dcc.Interval(id="progress-interval", interval=200, n_intervals=0, disabled=True),
-        dbc.Button("Show Statistics", id="show-statistics"),
+        dbc.Button("Show Statistics", id="show-statistics", disabled=True),
         dbc.Checklist(  # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
             options=[{"label": "Show Full Labels", "value": 0}],
             id="show-full-labels",
@@ -175,7 +177,7 @@ control_panel = html.Div(
             persistence=True,
             persistence_type=USER_STATE_STORAGE_TYPE,
         ),
-        dcc.Loading(id="control-loading", type="default", children=html.Div(id="control-loading-output")),
+        dcc.Loading(id="control-loading", type="default", children=html.Div(id="control-loading-output"), style={"visibility": "hidden"}),
     ],
     style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
 )
