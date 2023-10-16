@@ -79,7 +79,7 @@ def on_progress(_n_intervals: int, sorting_algorithm_i: str, input_N: Optional[s
     element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
     i, total = element_holder.get_progress()
     finished = i == total
-    return [str(i), str(total), not finished, f"{i}/{total}", finished, not finished]
+    return [i, total, not finished, f"{i}/{total}", finished, not finished]
 
 
 @callback(
