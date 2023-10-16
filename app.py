@@ -8,6 +8,7 @@ import plotly.express as px
 from dash import Dash, Input, Output, State, callback, ctx, dash_table, dcc, html
 from dash.exceptions import PreventUpdate
 from dash_iconify import DashIconify
+from flask_executor import Executor
 
 from Config import *
 from Elements import Elements
@@ -15,10 +16,17 @@ from sorting_algorithms import sorting_algorithms
 
 
 @callback(
+    Output("progress", "value"),
+    Output("progress", "max"),
+    Output("progress", "animated"),
+    Output("progress", "label"),
+    Output("progress-interval", "disabled"),
+    Output("show-statistics", "disabled"),
+    Output("expand-all", "disabled"),
+    Output("reset", "disabled"),
     Output("visiblity-state", "data"),
     Output("cytoscape", "elements"),
     Output("notifications-container", "children"),
-    Output("control-loading-output", "children"),
     Input("visiblity-state", "data"),
     Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
@@ -26,6 +34,7 @@ from sorting_algorithms import sorting_algorithms
     Input("cytoscape", "tapNode"),
     Input("expand-all", "n_clicks"),
     Input("reset", "n_clicks"),
+    Input("progress-interval", "n_intervals"),
 )
 def on_data(
     visiblity_state: Optional[str],
@@ -35,14 +44,23 @@ def on_data(
     node: dict,
     _expand_all: int,
     _reset: int,
+    _n_intervals: int,
 ):
     if input_N is None:
-        return [None, [], [], []]
+        return [0, 1, False, "", True, True, True, True, None, [], []]
+
+    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
+    i, total = element_holder.get_progress()
+    if i != total:
+        if not element_holder.get_and_set_initialize_scheduled():
+            executor.submit(Elements.initialize_element_holder, element_holder, int(sorting_algorithm_i), int(input_N))
+        return [i, total, True, f"{i}/{total}", False, True, True, True, None, [], []]
+
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if trigger_id in ("sorting-algorithm", "input-N", "reset"):
         visiblity_state = None
     elements = Elements(int(sorting_algorithm_i), int(input_N), visiblity_state)
-    notification = ""
+    notification = []
     if trigger_id == "cytoscape":
         elements.on_tap_node(int(node["data"]["id"]))
     elif trigger_id == "expand-all":
@@ -54,32 +72,14 @@ def on_data(
                 message=f"Too many elements, only {MAX_ELEMENTS} elements are displayed.",
                 icon=DashIconify(icon="material-symbols:warning"),
             )
-    return [elements.get_visiblity_state(), elements.visible_elements(bool(show_full_labels)), notification, []]
+    visiblity_state = elements.get_visiblity_state()
+    visible_elements = elements.visible_elements(bool(show_full_labels))
+    return [i, total, False, f"{i}/{total}", True, False, False, False, visiblity_state, visible_elements, notification]
 
 
 @callback(Output("input-N", "invalid"), Input("input-N", "value"))
 def on_input_N_invalid(input_N: Optional[str]):
     return input_N is None
-
-
-@callback(
-    Output("progress", "value"),
-    Output("progress", "max"),
-    Output("progress", "animated"),
-    Output("progress", "label"),
-    Output("progress-interval", "disabled"),
-    Output("show-statistics", "disabled"),
-    Input("progress-interval", "n_intervals"),
-    Input("sorting-algorithm", "value"),
-    Input("input-N", "value"),
-)
-def on_progress(_n_intervals: int, sorting_algorithm_i: str, input_N: Optional[str]):
-    if input_N is None:
-        return [0, 1, False, "", True, True]
-    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
-    i, total = element_holder.get_progress()
-    finished = i == total
-    return [i, total, not finished, f"{i}/{total}", finished, not finished]
 
 
 @callback(
@@ -238,6 +238,7 @@ app.layout = dmc.NotificationsProvider(
     )
 )
 server = app.server
+executor = Executor(server)
 
 if __name__ == "__main__":
     app.run(debug=True)

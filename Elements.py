@@ -34,7 +34,11 @@ class ElementHolder:
         self.lock = Lock()
         self.element_nodes = None
         self.progress = atomics.atomic(8, atomics.INT)
+        self.initialize_scheduled = atomics.atomic(1, atomics.BYTES)
         self.set_progress(0, 1)
+
+    def get_and_set_initialize_scheduled(self) -> bool:
+        return self.initialize_scheduled.bit_test_set(0, atomics.MemoryOrder.RELAXED)
 
     def get_progress(self) -> tuple[int, int]:
         x = self.progress.load(atomics.MemoryOrder.RELAXED)
@@ -69,7 +73,7 @@ class ElementHolder:
                     element_node.left = child_element_node
                 Q.append((child, child_element_node))
 
-    __slots__ = ["lock", "element_nodes", "operation_cnts", "progress"]
+    __slots__ = ["lock", "element_nodes", "operation_cnts", "progress", "initialize_scheduled"]
 
 
 class Elements:
@@ -84,18 +88,21 @@ class Elements:
             self.visiblity_state = np.array([0], dtype=np.int32)
             self.expand_children(0)
 
-    @classmethod
-    def get_element_holder(cls, sorting_algorithm_i: int, N: int, require_initialize: bool = True, **kwargs) -> ElementHolder:
-        with cls.cached_lock:
-            element_holder = cls.cached[(sorting_algorithm_i, N)]
-        if not require_initialize:
-            return element_holder
+    @staticmethod
+    def initialize_element_holder(element_holder: ElementHolder, sorting_algorithm_i: int, N: int):
         with element_holder.lock:
             if not element_holder.initialized():
                 name, func = sorting_algorithms[sorting_algorithm_i]
                 print(f"init: `{name}` with {N} elements")
                 element_holder.initialize(func, N)
                 print(f"fin:  `{name}` with {N} elements")
+
+    @classmethod
+    def get_element_holder(cls, sorting_algorithm_i: int, N: int, require_initialize: bool = True, **kwargs) -> ElementHolder:
+        with cls.cached_lock:
+            element_holder = cls.cached[(sorting_algorithm_i, N)]
+        if require_initialize:
+            cls.initialize_element_holder(element_holder, sorting_algorithm_i, N)
         return element_holder
 
     def get_visiblity_state(self) -> str:

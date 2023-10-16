@@ -17,5 +17,5 @@ pip install waitress
 ```
 
 ```bash
-waitress-serve --listen=127.0.0.1:8000 'app:server'
+waitress-serve --listen=127.0.0.1:8000 --threads 6 'app:server'
 ```
