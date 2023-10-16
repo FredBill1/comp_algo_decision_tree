@@ -49,7 +49,7 @@ def on_data(
     _n_intervals: int,
 ):
     if input_N is None:
-        return [0, 1, False, "", True, True, True, True, None, [], [], {"visibility": "hidden"}, ""]
+        return [0, 1, False, "", True, True, True, True, None, [], [], {}, ""]
 
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if trigger_id in ("sorting-algorithm", "input-N", "reset"):
@@ -233,6 +233,8 @@ app = Dash(
             "content": "user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi",
         }
     ],
+    title="Decision Tree",
+    update_title=None,
 )
 app.layout = dmc.NotificationsProvider(
     html.Div(
