@@ -2,11 +2,13 @@ import base64
 import zlib
 from collections import defaultdict, deque
 from collections.abc import Callable
+from dataclasses import dataclass
 from threading import Lock
 from typing import Optional
 
 import atomics
 import numpy as np
+import pandas as pd
 import sortednp as snp
 
 from Config import *
@@ -14,19 +16,28 @@ from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import sorting_algorithms
 
 
+@dataclass
 class ElementNode:
-    def __init__(self, id: int, full_label: str, parent_id: Optional[int] = None, cmp_op: Optional[str] = None) -> None:
-        self.id = id
-        self.full_label = full_label
-        self.cropped_label = self.full_label[: LABEL_CROP_LENGTH - 3] + "..." if len(self.full_label) > LABEL_CROP_LENGTH else self.full_label
-        self.edge_data: Optional[dict] = None if parent_id is None else {"data": dict(source=str(parent_id), target=str(id), cmp_op=cmp_op)}
-        self.left: Optional[ElementNode] = None
-        self.right: Optional[ElementNode] = None
+    full_label: str
+    parent_id: int = -1
+    cmp_op: str = ""
+    left_id: int = -1
+    right_id: int = -1
 
-    def node_data(self, show_full_labels: bool, classes: str) -> dict:
-        return {"data": {"id": str(self.id), "label": self.full_label if show_full_labels else self.cropped_label}, "classes": classes}
+    def node_data(self, node_id: int, show_full_labels: bool, classes: str) -> dict:
+        return {
+            "data": {"id": str(node_id), "label": self.full_label if show_full_labels else ElementNode.crop_label(self.full_label)},
+            "classes": classes,
+        }
 
-    __slots__ = ["id", "full_label", "cropped_label", "edge_data", "left", "right"]
+    def edge_data(self, node_id: int) -> dict:
+        return {"data": {"source": str(self.parent_id), "target": str(node_id), "label": self.cmp_op}}
+
+    @staticmethod
+    def crop_label(full_label: str) -> str:
+        if len(full_label) <= LABEL_CROP_LENGTH:
+            return full_label
+        return full_label[: LABEL_CROP_LENGTH - 3] + "..."
 
 
 class ElementHolder:
@@ -49,25 +60,28 @@ class ElementHolder:
     def initialize(self, sorting_func: Callable[[list], None], N: int) -> None:
         tree_node, self.operation_cnts, node_cnt = decision_tree(sorting_func, N, self.set_progress)
 
-        self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_label())]
-        Q: deque[tuple[DecisionTreeNode, ElementNode]] = deque([(tree_node, element_node)])
+        element_nodes: list[ElementNode] = [element_node := ElementNode(tree_node.get_label())]
+        Q: deque[tuple[DecisionTreeNode, int]] = deque([(tree_node, 0)])
         self.set_progress(1, node_cnt)
         while Q:
-            tree_node, element_node = Q.popleft()
+            tree_node, element_node_id = Q.popleft()
+            element_node = element_nodes[element_node_id]
             if tree_node.cmp_xy is None:  # leaf node
                 continue
             x, y = [chr(ord("a") + x) for x in tree_node.cmp_xy]
             for is_right, (op, child) in enumerate(zip("<>", [tree_node.left, tree_node.right])):
                 if child is None:
                     continue
-                child_element_node = ElementNode(len(self.element_nodes), child.get_label(), element_node.id, f"{x}{op}{y}")
-                self.element_nodes.append(child_element_node)
-                self.set_progress(len(self.element_nodes), node_cnt)
+                child_element_node_id = len(element_nodes)
+                child_element_node = ElementNode(child.get_label(), element_node_id, f"{x}{op}{y}")
+                element_nodes.append(child_element_node)
+                self.set_progress(len(element_nodes), node_cnt)
                 if is_right:
-                    element_node.right = child_element_node
+                    element_node.right_id = child_element_node_id
                 else:
-                    element_node.left = child_element_node
-                Q.append((child, child_element_node))
+                    element_node.left_id = child_element_node_id
+                Q.append((child, child_element_node_id))
+        self.element_nodes = pd.DataFrame(element_nodes)
 
     __slots__ = ["lock", "element_nodes", "operation_cnts", "progress"]
 
@@ -114,42 +128,44 @@ class Elements:
         return i < len(self.visiblity_state) and self.visiblity_state[i] == id
 
     def node_has_hidden_child(self, id: int) -> bool:
-        node = self.element_holder.element_nodes[id]
-        for child in (node.left, node.right):
-            if child is not None and not self.node_visiblity(child.id):
+        node = self.element_holder.element_nodes.iloc[id]
+        for child_id in (node.left_id, node.right_id):
+            if child_id != -1 and not self.node_visiblity(child_id):
                 return True
         return False
 
     def node_is_leaf(self, id: int) -> bool:
-        node = self.element_holder.element_nodes[id]
-        return node.left is None and node.right is None
+        node = self.element_holder.element_nodes.iloc[id]
+        return node.left_id == -1 and node.right_id == -1
 
     def expand_children(self, id: int) -> None:
         update: list[int] = []
-        Q = deque([self.element_holder.element_nodes[id]])
+        Q = deque([id])
         depth = 1
         while Q:
             for _ in range(len(Q)):
-                node = Q.popleft()
-                for child in (node.left, node.right):
-                    if child is not None:
-                        update.append(child.id)
+                node_id = Q.popleft()
+                node = self.element_holder.element_nodes.iloc[node_id]
+                for child_id in (node.left_id, node.right_id):
+                    if child_id != -1:
+                        update.append(child_id)
                         if depth < DISPLAY_DEPTH:
-                            Q.append(child)
+                            Q.append(child_id)
             depth += 1
         self.visiblity_state = snp.merge(self.visiblity_state, np.array(update, dtype=np.int32), duplicates=snp.DROP)
 
     def hide_children(self, id: int) -> None:
         deletes: list[int] = []
-        Q = deque([self.element_holder.element_nodes[id]])
+        Q = deque([id])
         while Q:
-            node = Q.popleft()
-            for child in (node.left, node.right):
-                if child is not None:
-                    i = self.visiblity_state.searchsorted(child.id)
-                    if i < len(self.visiblity_state) and self.visiblity_state[i] == child.id:
+            node_id = Q.popleft()
+            node = self.element_holder.element_nodes.iloc[node_id]
+            for child_id in (node.left_id, node.right_id):
+                if child_id != -1:
+                    i = self.visiblity_state.searchsorted(child_id)
+                    if i < len(self.visiblity_state) and self.visiblity_state[i] == child_id:
                         deletes.append(i)
-                        Q.append(child)
+                        Q.append(child_id)
         self.visiblity_state = np.delete(self.visiblity_state, deletes)
 
     def on_tap_node(self, id: int) -> None:
@@ -162,25 +178,25 @@ class Elements:
 
     def expand_all(self) -> bool:
         elem: list[int] = []
-        Q = deque([self.element_holder.element_nodes[0]])
+        Q = deque([0])
         tot = 1
         while Q and tot < MAX_ELEMENTS:
-            node = Q.popleft()
-            elem.append(node.id)
-            for child in (node.left, node.right):
-                if tot < MAX_ELEMENTS and child is not None:
+            node_id = Q.popleft()
+            node = self.element_holder.element_nodes.iloc[node_id]
+            elem.append(node_id)
+            for child_id in (node.left_id, node.right_id):
+                if tot < MAX_ELEMENTS and child_id != -1:
                     tot += 1
-                    Q.append(child)
+                    Q.append(child_id)
         self.visiblity_state = np.array(elem, dtype=np.int32)
         return tot < MAX_ELEMENTS
 
     def visible_elements(self, show_full_labels: bool) -> list[dict]:
         ret = []
-        for id in self.visiblity_state:
-            node: ElementNode = self.element_holder.element_nodes[id]
-            classes = "is_leaf" if self.node_is_leaf(id) else "has_hidden_child" if self.node_has_hidden_child(id) else ""
-            node_data = node.node_data(show_full_labels, classes)
-            ret.append(node_data)
-            if node.edge_data is not None:
-                ret.append(node.edge_data)
+        for node_id in self.visiblity_state:
+            node = self.element_holder.element_nodes.iloc[node_id]
+            classes = "is_leaf" if self.node_is_leaf(node_id) else "has_hidden_child" if self.node_has_hidden_child(node_id) else ""
+            ret.append(ElementNode.node_data(node, node_id, show_full_labels, classes))
+            if node.parent_id != -1:
+                ret.append(ElementNode.edge_data(node, node_id))
         return ret
