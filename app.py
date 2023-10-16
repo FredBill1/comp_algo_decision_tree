@@ -51,16 +51,17 @@ def on_data(
     if input_N is None:
         return [0, 1, False, "", True, True, True, True, None, [], [], {"visibility": "hidden"}, ""]
 
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if trigger_id in ("sorting-algorithm", "input-N", "reset"):
+        visiblity_state = None
+
     element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
     i, total = element_holder.get_progress()
     if i != total:
         if not element_holder.get_and_set_initialize_scheduled():
             executor.submit(Elements.initialize_element_holder, element_holder, int(sorting_algorithm_i), int(input_N))
-        return [i, total, True, f"{i}/{total}", False, True, True, True, None, [], [], {"visibility": "hidden"}, ""]
+        return [i, total, True, f"{i}/{total}", False, True, True, True, visiblity_state, [], [], {"visibility": "hidden"}, ""]
 
-    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    if trigger_id in ("sorting-algorithm", "input-N", "reset"):
-        visiblity_state = None
     elements = Elements(int(sorting_algorithm_i), int(input_N), visiblity_state)
     notification = []
     if trigger_id == "cytoscape":
