@@ -48,7 +48,7 @@ class InvalidSortingAlgorithmError(Exception):
 
 def decision_tree(
     sorting_func: Callable[[list], None], N: int, callback: Optional[Callable[[int, int], None]] = None
-) -> tuple[DecisionTreeNode, np.ndarray]:
+) -> tuple[DecisionTreeNode, np.ndarray, int]:
     root = DecisionTreeNode()
     node_cnt = 1
 
