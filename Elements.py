@@ -35,6 +35,7 @@ class ElementHolder:
         self.element_nodes = None
         self.progress = atomics.atomic(8, atomics.INT)
         self.initialize_scheduled = atomics.atomic(1, atomics.BYTES)
+        self.initialized_flag = atomics.atomic(1, atomics.BYTES)
         self.set_progress(0, 1)
 
     def get_and_set_initialize_scheduled(self) -> bool:
@@ -47,10 +48,21 @@ class ElementHolder:
     def set_progress(self, i: int, total: int):
         self.progress.store((i << 32) | total, atomics.MemoryOrder.RELAXED)
 
-    def initialized(self) -> bool:
-        return self.element_nodes is not None
+    def initialize(self, sorting_algorithm_i: int, N: int) -> None:
+        with self.lock:
+            name, func = sorting_algorithms[sorting_algorithm_i]
+            print(f"init: `{name}` with {N} elements")
+            self._initialize(func, N)
+            print(f"fin:  `{name}` with {N} elements")
+            self.initialized_flag.store(b"\x01", atomics.MemoryOrder.RELEASE)
 
-    def initialize(self, sorting_func: Callable[[list], None], N: int) -> None:
+    def wait_until_initialized(self) -> None:
+        if self.initialized_flag.load(atomics.MemoryOrder.RELAXED):
+            return
+        with self.lock:
+            pass
+
+    def _initialize(self, sorting_func: Callable[[list], None], N: int) -> None:
         tree_node, self.operation_cnts, node_cnt = decision_tree(sorting_func, N, self.set_progress)
 
         self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_label())]
@@ -73,37 +85,25 @@ class ElementHolder:
                     element_node.left = child_element_node
                 Q.append((child, child_element_node))
 
-    __slots__ = ["lock", "element_nodes", "operation_cnts", "progress", "initialize_scheduled"]
+    __slots__ = ["lock", "element_nodes", "operation_cnts", "progress", "initialize_scheduled", "initialized_flag"]
 
 
 class Elements:
     cached: defaultdict[tuple[int, int], ElementHolder] = defaultdict(ElementHolder)
     cached_lock = Lock()
 
-    def __init__(self, sorting_algorithm_i: int, N: int, visiblity_state: Optional[str], **kwargs) -> None:
-        self.element_holder = self.get_element_holder(sorting_algorithm_i, N)
+    def __init__(self, element_holder: ElementHolder, visiblity_state: Optional[str]) -> None:
+        self.element_holder = element_holder
         if visiblity_state is not None:
             self.visiblity_state = self.decode_visiblity(visiblity_state)
         else:
             self.visiblity_state = np.array([0], dtype=np.int32)
             self.expand_children(0)
 
-    @staticmethod
-    def initialize_element_holder(element_holder: ElementHolder, sorting_algorithm_i: int, N: int):
-        with element_holder.lock:
-            if not element_holder.initialized():
-                name, func = sorting_algorithms[sorting_algorithm_i]
-                print(f"init: `{name}` with {N} elements")
-                element_holder.initialize(func, N)
-                print(f"fin:  `{name}` with {N} elements")
-
     @classmethod
-    def get_element_holder(cls, sorting_algorithm_i: int, N: int, require_initialize: bool = True, **kwargs) -> ElementHolder:
+    def get_element_holder(cls, sorting_algorithm_i: int, N: int) -> ElementHolder:
         with cls.cached_lock:
-            element_holder = cls.cached[(sorting_algorithm_i, N)]
-        if require_initialize:
-            cls.initialize_element_holder(element_holder, sorting_algorithm_i, N)
-        return element_holder
+            return cls.cached[(sorting_algorithm_i, N)]
 
     def get_visiblity_state(self) -> str:
         return self.encode_visiblity(self.visiblity_state)

@@ -55,14 +55,15 @@ def on_data(
     if trigger_id in ("sorting-algorithm", "input-N", "reset"):
         visiblity_state = None
 
-    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N), require_initialize=False)
+    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N))
     i, total = element_holder.get_progress()
     if i != total:
         if not element_holder.get_and_set_initialize_scheduled():
-            executor.submit(Elements.initialize_element_holder, element_holder, int(sorting_algorithm_i), int(input_N))
+            executor.submit(element_holder.initialize, int(sorting_algorithm_i), int(input_N))
         return [i, total, True, f"{i}/{total}", False, True, True, True, visiblity_state, [], [], {"visibility": "hidden"}, ""]
 
-    elements = Elements(int(sorting_algorithm_i), int(input_N), visiblity_state)
+    element_holder.wait_until_initialized()
+    elements = Elements(element_holder, visiblity_state)
     notification = []
     if trigger_id == "cytoscape":
         elements.on_tap_node(int(node["data"]["id"]))
@@ -123,6 +124,7 @@ def on_show_statics(_: int, is_open: bool, sorting_algorithm_i: str, input_N: Op
     if input_N is None:
         raise PreventUpdate
     element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N))
+    element_holder.wait_until_initialized()
     data = element_holder.operation_cnts
     fig = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
     fig.layout.update(showlegend=False)
