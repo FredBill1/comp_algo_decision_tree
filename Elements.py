@@ -1,4 +1,5 @@
 import base64
+import traceback
 import zlib
 from collections import defaultdict, deque
 from threading import Lock
@@ -62,7 +63,12 @@ class ElementHolder:
             pass
 
     def _initialize(self, sorting_algo: SortingAlgorithm, N: int) -> None:
-        tree_node, self.operation_cnts, node_cnt = decision_tree(sorting_algo, N, self.set_progress)
+        try:
+            tree_node, self.operation_cnts, node_cnt = decision_tree(sorting_algo, N, self.set_progress)
+        except Exception as e:
+            traceback.print_exc()
+            self.initialize_scheduled.store(b"\x00", atomics.MemoryOrder.RELEASE)
+            raise e
 
         self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_label())]
         Q: deque[tuple[DecisionTreeNode, ElementNode]] = deque([(tree_node, element_node)])
