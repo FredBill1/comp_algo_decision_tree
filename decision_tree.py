@@ -63,6 +63,8 @@ def decision_tree(
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
     TOTAL = sorting_algo.total(N)
+    if callback is not None:
+        callback(0, TOTAL)
     operation_cnts = np.zeros(TOTAL, dtype=np.int32)
     key = cmp_to_key(cmp)
     for I, actual in enumerate(sorting_algo.generator(N)):
