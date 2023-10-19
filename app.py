@@ -29,6 +29,7 @@ from sorting_algorithms import sorting_algorithms
     Output("notifications-container", "children"),
     Output("control-loading", "style"),
     Output("control-loading-output", "children"),
+    Output("buffered-input", "data"),
     Input("visiblity-state", "data"),
     Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
@@ -37,6 +38,7 @@ from sorting_algorithms import sorting_algorithms
     Input("expand-all", "n_clicks"),
     Input("reset", "n_clicks"),
     Input("progress-interval", "n_intervals"),
+    State("buffered-input", "data"),
 )
 def on_data(
     visiblity_state: Optional[str],
@@ -47,9 +49,10 @@ def on_data(
     _expand_all: int,
     _reset: int,
     _n_intervals: int,
+    buffered_input: Optional[list],
 ):
     if input_N is None:
-        return [0, 1, False, "", True, True, True, True, None, [], [], {}, ""]
+        return [0, 1, False, "", True, True, True, True, None, [], [], {}, "", None]
 
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if trigger_id in ("sorting-algorithm", "input-N", "reset"):
@@ -60,14 +63,18 @@ def on_data(
     if i != total:
         if not element_holder.get_and_set_initialize_scheduled():
             executor.submit(element_holder.initialize, int(sorting_algorithm_i), int(input_N))
-        return [i, total, True, f"{i}/{total}", False, True, True, True, visiblity_state, [], [], {"visibility": "hidden"}, ""]
+        if trigger_id == "cytoscape":
+            buffered_input = ["tap", int(node["data"]["id"])]
+        elif trigger_id == "expand-all":
+            buffered_input = ["expand-all"]
+        return [i, total, True, f"{i}/{total}", False, True, True, True, visiblity_state, [], [], {"visibility": "hidden"}, "", buffered_input]
 
     element_holder.wait_until_initialized()
     elements = Elements(element_holder, visiblity_state)
     notification = []
-    if trigger_id == "cytoscape":
-        elements.on_tap_node(int(node["data"]["id"]))
-    elif trigger_id == "expand-all":
+    if trigger_id == "cytoscape" or (buffered_input is not None and buffered_input[0] == "tap"):
+        elements.on_tap_node(int(node["data"]["id"]) if trigger_id == "cytoscape" else buffered_input[1])
+    elif trigger_id == "expand-all" or (buffered_input is not None and buffered_input[0] == "expand-all"):
         if not elements.expand_all():
             notification = dmc.Notification(
                 id="warning-notification",
@@ -78,7 +85,7 @@ def on_data(
             )
     visiblity_state = elements.get_visiblity_state()
     visible_elements = elements.visible_elements(bool(show_full_labels))
-    return [i, total, False, f"{i}/{total}", True, False, False, False, visiblity_state, visible_elements, notification, {}, ""]
+    return [i, total, False, f"{i}/{total}", True, False, False, False, visiblity_state, visible_elements, notification, {}, "", None]
 
 
 @callback(Output("input-N", "invalid"), Input("input-N", "value"))
@@ -224,6 +231,7 @@ statistics_modal = dbc.Modal(
     ],
 )
 visiblity_state = dcc.Store(id="visiblity-state", storage_type=USER_STATE_STORAGE_TYPE)
+buffered_input = dcc.Store(id="buffered-input", storage_type=USER_STATE_STORAGE_TYPE)
 
 app = Dash(
     __name__,
@@ -239,7 +247,7 @@ app = Dash(
 )
 app.layout = dmc.NotificationsProvider(
     html.Div(
-        [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal, statistics_modal, visiblity_state],
+        [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal, statistics_modal, visiblity_state, buffered_input],
         style={"height": "90vh", "width": "98vw", "margin": "auto"},
     )
 )
