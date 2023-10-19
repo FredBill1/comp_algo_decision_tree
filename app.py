@@ -98,10 +98,10 @@ def on_input_N_invalid(input_N: Optional[str]):
 def on_show_code(_: int, is_open: bool, sorting_algorithm_i: str):
     if is_open:
         return [False, []]
-    sorting_algorithm_i = int(sorting_algorithm_i)
-    code = inspect.getsource(sorting_algorithms[sorting_algorithm_i][1]).strip()
+    sorting_algo = sorting_algorithms[int(sorting_algorithm_i)]
+    code = inspect.getsource(sorting_algo.func).strip()
     children = [
-        dbc.ModalHeader(dbc.ModalTitle(sorting_algorithms[sorting_algorithm_i][0])),
+        dbc.ModalHeader(dbc.ModalTitle(sorting_algo.name)),
         dbc.ModalBody(dcc.Markdown(f"```python\n{code}\n```"), style={"margin": "auto"}),
     ]
     return [True, children, ""]
@@ -139,7 +139,7 @@ control_panel = html.Div(
             [
                 "Sorting Algorithm:",
                 dbc.Select(
-                    options=[{"label": name, "value": i} for i, (name, _) in enumerate(sorting_algorithms)],
+                    options=[{"label": sorting_algo.name, "value": i} for i, sorting_algo in enumerate(sorting_algorithms)],
                     id="sorting-algorithm",
                     style={"width": "12rem"},
                     value=str(SORTING_ALGORITHM_I),

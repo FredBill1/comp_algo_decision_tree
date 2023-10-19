@@ -1,7 +1,6 @@
 import base64
 import zlib
 from collections import defaultdict, deque
-from collections.abc import Callable
 from threading import Lock
 from typing import Optional
 
@@ -11,7 +10,7 @@ import sortednp as snp
 
 from Config import *
 from decision_tree import DecisionTreeNode, decision_tree
-from sorting_algorithms import sorting_algorithms
+from sorting_algorithms import SortingAlgorithm, sorting_algorithms
 
 
 class ElementNode:
@@ -50,10 +49,10 @@ class ElementHolder:
 
     def initialize(self, sorting_algorithm_i: int, N: int) -> None:
         with self.lock:
-            name, func = sorting_algorithms[sorting_algorithm_i]
-            print(f"init: `{name}` with {N} elements")
-            self._initialize(func, N)
-            print(f"fin:  `{name}` with {N} elements")
+            sorting_algo = sorting_algorithms[sorting_algorithm_i]
+            print(f"init: `{sorting_algo.name}` with {N} elements")
+            self._initialize(sorting_algo, N)
+            print(f"fin:  `{sorting_algo.name}` with {N} elements")
             self.initialized_flag.store(b"\x01", atomics.MemoryOrder.RELEASE)
 
     def wait_until_initialized(self) -> None:
@@ -62,8 +61,8 @@ class ElementHolder:
         with self.lock:
             pass
 
-    def _initialize(self, sorting_func: Callable[[list], None], N: int) -> None:
-        tree_node, self.operation_cnts, node_cnt = decision_tree(sorting_func, N, self.set_progress)
+    def _initialize(self, sorting_algo: SortingAlgorithm, N: int) -> None:
+        tree_node, self.operation_cnts, node_cnt = decision_tree(sorting_algo, N, self.set_progress)
 
         self.element_nodes: list[ElementNode] = [element_node := ElementNode(0, tree_node.get_label())]
         Q: deque[tuple[DecisionTreeNode, ElementNode]] = deque([(tree_node, element_node)])

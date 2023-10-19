@@ -1,3 +1,17 @@
+from collections.abc import Callable, Iterable, Sequence
+from itertools import permutations
+from math import factorial
+from typing import NamedTuple
+
+
+class SortingAlgorithm(NamedTuple):
+    name: str
+    func: Callable[[list], None]
+    total: Callable[[int], int] = factorial
+    generator: Callable[[int], Iterable[Sequence[int]]] = lambda n: permutations(range(n))
+    validator: Callable[[Iterable[int]], bool] = lambda arr: all(i == v for i, v in enumerate(arr))
+
+
 def bubble_sort(arr: list) -> None:
     for i in range(len(arr) - 2, -1, -1):
         for j in range(i + 1):
@@ -121,12 +135,26 @@ def merge_sort(arr: list) -> None:
     impl(arr, 0, len(arr) - 1)
 
 
+def push_down(arr: list) -> None:
+    k, n = 0, len(arr)
+    while 2 * k + 1 < n:
+        j = 2 * k + 1
+        if j + 1 < n and arr[j] < arr[j + 1]:
+            j += 1
+        if arr[k] < arr[j]:
+            arr[k], arr[j] = arr[j], arr[k]
+            k = j
+        else:
+            break
+
+
 sorting_algorithms = [
-    ("bubble sort", bubble_sort),
-    ("insertion sort", insertion_sort),
-    ("selection sort", selection_sort),
-    ("Hoare quick sort", hoare_quick_sort),
-    ("Lomuto quick sort", Lomuto_quick_sort),
-    ("heap sort", heap_sort),
-    ("merge sort", merge_sort),
+    SortingAlgorithm("bubble sort", bubble_sort),
+    SortingAlgorithm("insertion sort", insertion_sort),
+    SortingAlgorithm("selection sort", selection_sort),
+    SortingAlgorithm("Hoare quick sort", hoare_quick_sort),
+    SortingAlgorithm("Lomuto quick sort", Lomuto_quick_sort),
+    SortingAlgorithm("heap sort", heap_sort),
+    SortingAlgorithm("merge sort", merge_sort),
+    SortingAlgorithm("push down", push_down),
 ]

@@ -1,19 +1,18 @@
 from collections.abc import Callable
 from functools import cmp_to_key
-from itertools import permutations
-from math import factorial
 from typing import Optional
 
 import numpy as np
 
 from Config import *
+from sorting_algorithms import SortingAlgorithm
 
 
 class DecisionTreeNode:
     def __init__(self) -> None:
         self.arr: Optional[list[int]] = None
         self.cmp_xy: Optional[tuple[int, int]] = None
-        self.actuals: list[list[int]] = []
+        self.actuals: list[tuple[int, ...]] = []
         self.left: Optional[DecisionTreeNode] = None
         self.right: Optional[DecisionTreeNode] = None
 
@@ -21,7 +20,7 @@ class DecisionTreeNode:
         ret = [self.get_arr()]
         tot_len = len(ret[0])
         for actual in self.actuals:
-            ret.append(f" ({','.join(map(str, actual))})")
+            ret.append(f" ({','.join(str(x + 1) for x in actual)})")
             tot_len += len(ret[-1])
             if tot_len >= LABEL_MAX_LENGTH:
                 return "".join(ret)[: LABEL_MAX_LENGTH - 3] + "..."
@@ -47,7 +46,7 @@ class InvalidSortingAlgorithmError(Exception):
 
 
 def decision_tree(
-    sorting_func: Callable[[list], None], N: int, callback: Optional[Callable[[int, int], None]] = None
+    sorting_algo: SortingAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None
 ) -> tuple[DecisionTreeNode, np.ndarray, int]:
     root = DecisionTreeNode()
     node_cnt = 1
@@ -63,18 +62,18 @@ def decision_tree(
             cmp_xys.append((x, y, actual[x] < actual[y]))
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
-    TOTAL = factorial(N)
+    TOTAL = sorting_algo.total(N)
     operation_cnts = np.zeros(TOTAL, dtype=np.int32)
     key = cmp_to_key(cmp)
-    for I, actual in enumerate(permutations(range(1, N + 1))):
+    for I, actual in enumerate(sorting_algo.generator(N)):
         if callback is not None:
             callback(I, TOTAL)
         arrs = []
         cmp_xys = []
         arr = [(key(x), x) for x in range(N)]
         operation_cnt = 0
-        sorting_func(arr)
-        if any(actual[x] != y for (_, x), y in zip(arr, range(1, N + 1))):
+        sorting_algo.func(arr)
+        if not sorting_algo.validator(actual[x] for _, x in arr):
             raise InvalidSortingAlgorithmError
         operation_cnts[I] = operation_cnt
         arrs.append([x for _, x in arr])
@@ -123,10 +122,10 @@ def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
 
 
 if __name__ == "__main__":
-    from sorting_algorithms import *
+    from sorting_algorithms import sorting_algorithms
 
     N = 3
-    tree, operation_cnts, node_cnt = decision_tree(bubble_sort, N)
+    tree, operation_cnts, node_cnt = decision_tree(sorting_algorithms[0], N)
     # tree = decision_tree(quick_sort, N)
     # tree = decision_tree(LomutoQS, N)
     # tree = decision_tree(merge_sort, N)
