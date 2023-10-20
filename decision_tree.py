@@ -1,8 +1,7 @@
 from collections.abc import Callable
 from functools import cmp_to_key
+from time import time
 from typing import Optional
-
-import numpy as np
 
 from Config import *
 from sorting_algorithms import SortingAlgorithm
@@ -27,7 +26,7 @@ class DecisionTreeNode:
         return "".join(ret)
 
     def get_arr(self) -> str:
-        return "(" + ",".join(chr(ord("a") + x) for x in self.arr) + ")"
+        return "(" + ",".join(chr(ord("a") + x) if len(self.arr) <= 26 else str(x) for x in self.arr) + ")"
 
     def get_actuals(self) -> str:
         return " ".join("(" + ",".join(map(str, x)) + ")" for x in self.actuals)
@@ -47,7 +46,7 @@ class InvalidSortingAlgorithmError(Exception):
 
 def decision_tree(
     sorting_algo: SortingAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None
-) -> tuple[DecisionTreeNode, np.ndarray, int]:
+) -> tuple[DecisionTreeNode, list[int], int]:
     root = DecisionTreeNode()
     node_cnt = 1
 
@@ -62,14 +61,24 @@ def decision_tree(
             cmp_xys.append((x, y, actual[x] < actual[y]))
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
-    TOTAL = sorting_algo.total(N)
+    do_sample = N > sorting_algo.max_N
+    TOTAL = 1 if do_sample else sorting_algo.total(N)
     if callback is not None:
-        callback(0, TOTAL)
-    operation_cnts = np.zeros(TOTAL, dtype=np.int32)
+        if do_sample:
+            callback(0, MAX_SAMPLE_TIME_MS)
+        else:
+            callback(0, TOTAL)
+    operation_cnts = []
     key = cmp_to_key(cmp)
-    for I, actual in enumerate(sorting_algo.generator(N)):
+    start_time = time()
+    for I, actual in enumerate(sorting_algo.sampler(N) if do_sample else sorting_algo.generator(N)):
+        if do_sample and (cur_time := int((time() - start_time) * 1000)) >= MAX_SAMPLE_TIME_MS:
+            break
         if callback is not None:
-            callback(I, TOTAL)
+            if do_sample:
+                callback(cur_time, MAX_SAMPLE_TIME_MS)
+            else:
+                callback(I, TOTAL)
         arrs = []
         cmp_xys = []
         arr = [(key(x), x) for x in range(N)]
@@ -77,7 +86,7 @@ def decision_tree(
         sorting_algo.func(arr)
         if not sorting_algo.validator(actual[x] for _, x in arr):
             raise InvalidSortingAlgorithmError
-        operation_cnts[I] = operation_cnt
+        operation_cnts.append(operation_cnt)
         arrs.append([x for _, x in arr])
         cmp_xys.append(None)
         node = root

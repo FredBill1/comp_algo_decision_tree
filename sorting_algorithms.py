@@ -1,16 +1,26 @@
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Generator, Iterable, Sequence
 from itertools import permutations
 from math import factorial
+from random import shuffle
 from typing import NamedTuple
 
 import heaps
 
 
+def _sampler(N: int) -> Generator[list[int], None, None]:
+    arr = list(range(N))
+    while True:
+        shuffle(arr)
+        yield arr
+
+
 class SortingAlgorithm(NamedTuple):
     name: str
     func: Callable[[list], None]
+    max_N: int
     generator: Callable[[int], Iterable[Sequence[int]]] = lambda n: permutations(range(n))
-    total: Callable[[int], int] = factorial
+    total: Callable[[int], int | float] = factorial
+    sampler: Callable[[int], Generator[Sequence[int], None, None]] = _sampler
     validator: Callable[[Iterable[int]], bool] = lambda arr: all(i == v for i, v in enumerate(arr))
 
 
@@ -138,12 +148,20 @@ def merge_sort(arr: list) -> None:
 
 
 sorting_algorithms = [
-    SortingAlgorithm("bubble sort", bubble_sort),
-    SortingAlgorithm("insertion sort", insertion_sort),
-    SortingAlgorithm("selection sort", selection_sort),
-    SortingAlgorithm("Hoare quick sort", hoare_quick_sort),
-    SortingAlgorithm("Lomuto quick sort", Lomuto_quick_sort),
-    SortingAlgorithm("heap sort", heap_sort),
-    SortingAlgorithm("merge sort", merge_sort),
-    SortingAlgorithm("push down", heaps.push_down, heaps.semi_heaps, heaps.semi_heaps_total, lambda arr: heaps.is_heap(tuple(arr))),
+    SortingAlgorithm("bubble sort", bubble_sort, 8),
+    SortingAlgorithm("selection sort", selection_sort, 8),
+    SortingAlgorithm("insertion sort", insertion_sort, 9),
+    SortingAlgorithm("Hoare quick sort", hoare_quick_sort, 9),
+    SortingAlgorithm("Lomuto quick sort", Lomuto_quick_sort, 9),
+    SortingAlgorithm("heap sort", heap_sort, 9),
+    SortingAlgorithm("merge sort", merge_sort, 9),
+    SortingAlgorithm(
+        "push down",
+        heaps.push_down,
+        heaps.max_N,
+        heaps.semi_heaps,
+        heaps.semi_heaps_total,
+        heaps.semi_heap_sampler,
+        lambda arr: heaps.is_heap(tuple(arr)),
+    ),
 ]

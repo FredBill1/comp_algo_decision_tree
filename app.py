@@ -4,6 +4,7 @@ from typing import Optional
 import dash_bootstrap_components as dbc
 import dash_cytoscape as cyto
 import dash_mantine_components as dmc
+import numpy as np
 import plotly.express as px
 from dash import Dash, Input, Output, State, callback, ctx, dash_table, dcc, html
 from dash.exceptions import PreventUpdate
@@ -132,7 +133,7 @@ def on_show_statics(_: int, is_open: bool, sorting_algorithm_i: str, input_N: Op
         raise PreventUpdate
     element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N))
     element_holder.wait_until_initialized()
-    data = element_holder.operation_cnts
+    data = np.array(element_holder.operation_cnts, dtype=np.int32)
     fig = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
     fig.layout.update(showlegend=False)
     return [True, fig, [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}], ""]
