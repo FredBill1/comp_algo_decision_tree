@@ -31,6 +31,7 @@ from sorting_algorithms import sorting_algorithms
     Output("control-loading", "style"),
     Output("control-loading-output", "children"),
     Output("buffered-input", "data"),
+    Output("last-tree-param", "data"),
     Input("visiblity-state", "data"),
     Input("sorting-algorithm", "value"),
     Input("input-N", "value"),
@@ -40,6 +41,7 @@ from sorting_algorithms import sorting_algorithms
     Input("reset", "n_clicks"),
     Input("progress-interval", "n_intervals"),
     State("buffered-input", "data"),
+    State("last-tree-param", "data"),
 )
 def on_data(
     visiblity_state: Optional[str],
@@ -51,9 +53,24 @@ def on_data(
     _reset: int,
     _n_intervals: int,
     buffered_input: Optional[list],
+    last_tree_param: Optional[list],
 ):
+    tree_param = [int(sorting_algorithm_i), int(input_N)]
     if input_N is None:
-        return [0, 1, False, "", True, True, True, True, None, [], [], {}, "", None]
+        return [0, 1, False, "", True, True, True, True, None, [], [], {}, "", None, tree_param]
+
+    notification = []
+    if tree_param != last_tree_param and sorting_algorithms[int(sorting_algorithm_i)].max_N < int(input_N):
+        sorting_algorithm = sorting_algorithms[int(sorting_algorithm_i)]
+        notification = dmc.Notification(
+            id="warning-notification",
+            title="Warning",
+            action="show",
+            message=f"Input `N={input_N}` is too large (upper limit for `{sorting_algorithm.name}` is {sorting_algorithm.max_N}), "
+            f"using the results from random sampling for {MAX_SAMPLE_TIME_MS / 1000:.1f}s instead.",
+            icon=DashIconify(icon="material-symbols:warning"),
+            autoClose=10000,
+        )
 
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if trigger_id in ("sorting-algorithm", "input-N", "reset"):
@@ -68,11 +85,10 @@ def on_data(
             buffered_input = ["tap", int(node["data"]["id"])]
         elif trigger_id == "expand-all":
             buffered_input = ["expand-all"]
-        return [i, total, True, f"{i}/{total}", False, True, True, True, visiblity_state, [], [], {"visibility": "hidden"}, "", buffered_input]
+        return [i, total, True, f"{i}/{total}", False, True, True, True, visiblity_state, [], notification, {"visibility": "hidden"}, "", buffered_input, tree_param]
 
     element_holder.wait_until_initialized()
     elements = Elements(element_holder, visiblity_state)
-    notification = []
     if trigger_id == "cytoscape" or (buffered_input is not None and buffered_input[0] == "tap"):
         elements.on_tap_node(int(node["data"]["id"]) if trigger_id == "cytoscape" else buffered_input[1])
     elif trigger_id == "expand-all" or (buffered_input is not None and buffered_input[0] == "expand-all"):
@@ -83,10 +99,11 @@ def on_data(
                 action="show",
                 message=f"Too many elements, only {MAX_ELEMENTS} elements are displayed.",
                 icon=DashIconify(icon="material-symbols:warning"),
+                autoClose=10000,
             )
     visiblity_state = elements.get_visiblity_state()
     visible_elements = elements.visible_elements(bool(show_full_labels))
-    return [i, total, False, f"{i}/{total}", True, False, False, False, visiblity_state, visible_elements, notification, {}, "", None]
+    return [i, total, False, f"{i}/{total}", True, False, False, False, visiblity_state, visible_elements, notification, {}, "", None, tree_param]
 
 
 @callback(Output("input-N", "invalid"), Input("input-N", "value"))
@@ -176,7 +193,7 @@ control_panel = html.Div(
             style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
         ),
         dbc.Progress(id="progress", value=0, striped=True, animated=True, style={"width": "10rem", "height": "1.3rem"}),
-        dcc.Interval(id="progress-interval", interval=200, n_intervals=0, disabled=True),
+        dcc.Interval(id="progress-interval", interval=300, n_intervals=0, disabled=True),
         dbc.Button("Show Statistics", id="show-statistics", disabled=True),
         dbc.Checklist(  # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
             options=[{"label": "Show Full Labels", "value": 0}],
@@ -233,6 +250,7 @@ statistics_modal = dbc.Modal(
 )
 visiblity_state = dcc.Store(id="visiblity-state", storage_type=USER_STATE_STORAGE_TYPE)
 buffered_input = dcc.Store(id="buffered-input", storage_type=USER_STATE_STORAGE_TYPE)
+last_tree_param = dcc.Store(id="last-tree-param", storage_type=USER_STATE_STORAGE_TYPE)
 
 app = Dash(
     __name__,
@@ -248,7 +266,7 @@ app = Dash(
 )
 app.layout = dmc.NotificationsProvider(
     html.Div(
-        [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal, statistics_modal, visiblity_state, buffered_input],
+        [html.Div(id="notifications-container"), control_panel, cytoscape, code_modal, statistics_modal, visiblity_state, buffered_input, last_tree_param],
         style={"height": "90vh", "width": "98vw", "margin": "auto"},
     )
 )
