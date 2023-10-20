@@ -13,7 +13,7 @@ from dash_iconify import DashIconify
 from flask_executor import Executor
 
 from Config import *
-from Elements import Elements
+from Nodes import Nodes
 from sorting_algorithms import sorting_algorithms
 
 
@@ -93,12 +93,12 @@ def on_data(
     if trigger_id in ("sorting_algorithm", "input_N", "reset"):
         visiblity_state = None
 
-    element_holder = Elements.get_element_holder(int(sorting_algorithm_i), int(input_N))
-    ret.progress__value, ret.progress__max = i, total = element_holder.get_progress()
+    node_holder = Nodes.get_node_holder(int(sorting_algorithm_i), int(input_N))
+    ret.progress__value, ret.progress__max = i, total = node_holder.get_progress()
     ret.progress__label = f"{i}/{total}"
     if i != total:
-        if not element_holder.get_and_set_initialize_scheduled():
-            executor.submit(element_holder.initialize, int(sorting_algorithm_i), int(input_N))
+        if not node_holder.get_and_set_initialize_scheduled():
+            executor.submit(node_holder.initialize, int(sorting_algorithm_i), int(input_N))
         if trigger_id == "cytoscape":
             ret.buffered_input__data = ["tap", int(node["data"]["id"])]
         elif trigger_id == "expand_all":
@@ -115,28 +115,28 @@ def on_data(
     ret.expand_all__disabled = False
     ret.reset__disabled = False
 
-    element_holder.wait_until_initialized()
-    elements = Elements(element_holder, visiblity_state)
+    node_holder.wait_until_initialized()
+    nodes = Nodes(node_holder, visiblity_state)
     if trigger_id == "show_statistics" or (buffered_input is not None and buffered_input[0] == "show_statistics"):
-        data = np.array(element_holder.operation_cnts, dtype=np.int32)
+        data = np.array(node_holder.operation_cnts, dtype=np.int32)
         ret.statistics_graph__figure = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
         ret.statistics_graph__figure.layout.update(showlegend=False)
         ret.statistics_modal__is_open = True
         ret.statistics_table__data = [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}]
     elif trigger_id == "cytoscape" or (buffered_input is not None and buffered_input[0] == "tap"):
-        elements.on_tap_node(int(node["data"]["id"]) if trigger_id == "cytoscape" else buffered_input[1])
+        nodes.on_tap_node(int(node["data"]["id"]) if trigger_id == "cytoscape" else buffered_input[1])
     elif trigger_id == "expand_all" or (buffered_input is not None and buffered_input[0] == "expand_all"):
-        if not elements.expand_all():
+        if not nodes.expand_all():
             ret.notifications_container__children = dmc.Notification(
                 id="warning_notification",
                 title="Warning",
                 action="show",
-                message=f"Too many elements, only {MAX_ELEMENTS} elements are displayed.",
+                message=f"Too many nodes, only {MAX_ELEMENTS} nodes are displayed.",
                 icon=DashIconify(icon="material-symbols:warning"),
                 autoClose=10000,
             )
-    ret.visiblity_state__data = elements.get_visiblity_state()
-    ret.cytoscape__elements = elements.visible_elements(bool(show_full_labels))
+    ret.visiblity_state__data = nodes.get_visiblity_state()
+    ret.cytoscape__elements = nodes.visible_elements(bool(show_full_labels))
     return ret.to_list()
 
 

@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import cmp_to_key
-from time import time
+from time import thread_time
 from typing import Optional
 
 from Config import *
@@ -8,30 +8,28 @@ from sorting_algorithms import SortingAlgorithm
 
 
 class DecisionTreeNode:
-    def __init__(self) -> None:
+    def __init__(self, parent_id: Optional[int] = None, cmp_op: Optional[str] = None) -> None:
         self.arr: Optional[list[int]] = None
         self.cmp_xy: Optional[tuple[int, int]] = None
         self.actuals: list[tuple[int, ...]] = []
         self.left: Optional[DecisionTreeNode] = None
         self.right: Optional[DecisionTreeNode] = None
+        self.edge_data = {"data": dict(source=str(parent_id), target=str(id(self)), cmp_op=cmp_op)} if parent_id is not None else None
 
-    def get_label(self) -> str:
+    def get_arr(self) -> str:
+        return "(" + ",".join(chr(ord("a") + x) if len(self.arr) <= 26 else str(x) for x in self.arr) + ")"
+
+    def label(self, crop_length: Optional[int]) -> str:
         ret = [self.get_arr()]
         tot_len = len(ret[0])
         for actual in self.actuals:
             ret.append(f" ({','.join(str(x + 1) for x in actual)})")
             tot_len += len(ret[-1])
-            if tot_len >= LABEL_MAX_LENGTH:
-                return "".join(ret)[: LABEL_MAX_LENGTH - 3] + "..."
+            if crop_length is not None and tot_len >= crop_length:
+                return "".join(ret)[: crop_length - 3] + "..."
         return "".join(ret)
 
-    def get_arr(self) -> str:
-        return "(" + ",".join(chr(ord("a") + x) if len(self.arr) <= 26 else str(x) for x in self.arr) + ")"
-
-    def get_actuals(self) -> str:
-        return " ".join("(" + ",".join(map(str, x)) + ")" for x in self.actuals)
-
-    __slots__ = ["arr", "cmp_xy", "actuals", "left", "right"]
+    __slots__ = ["arr", "cmp_xy", "actuals", "left", "right", "edge_data"]
 
 
 class NonDeterministicError(Exception):
@@ -44,9 +42,7 @@ class InvalidSortingAlgorithmError(Exception):
         super().__init__("Invalid sorting algorithm")
 
 
-def decision_tree(
-    sorting_algo: SortingAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None
-) -> tuple[DecisionTreeNode, list[int], int]:
+def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[DecisionTreeNode, list[int], int]:
     root = DecisionTreeNode()
     node_cnt = 1
 
@@ -70,15 +66,8 @@ def decision_tree(
             callback(0, TOTAL)
     operation_cnts = []
     key = cmp_to_key(cmp)
-    start_time = time()
+    start_time = thread_time()
     for I, actual in enumerate(sorting_algo.sampler(N) if do_sample else sorting_algo.generator(N)):
-        if do_sample and (cur_time := int((time() - start_time) * 1000)) >= MAX_SAMPLE_TIME_MS:
-            break
-        if callback is not None:
-            if do_sample:
-                callback(cur_time, MAX_SAMPLE_TIME_MS)
-            else:
-                callback(I, TOTAL)
         arrs = []
         cmp_xys = []
         arr = [(key(x), x) for x in range(N)]
@@ -107,17 +96,25 @@ def decision_tree(
             elif node.cmp_xy != cmp_xy[:2]:
                 raise NonDeterministicError
 
+            x, y = [chr(ord("a") + x) if x <= 26 else f"[{x}]" for x in cmp_xy[:2]]
             if cmp_xy[2]:  # x < y
                 if node.left is None:
-                    node.left = DecisionTreeNode()
+                    node.left = DecisionTreeNode(id(node), f"{x}<{y}")
                     node_cnt += 1
                 node = node.left
             else:
                 if node.right is None:
-                    node.right = DecisionTreeNode()
+                    node.right = DecisionTreeNode(id(node), f"{x}>{y}")
                     node_cnt += 1
                 node = node.right
-
+        if do_sample and (cur_time := int((thread_time() - start_time) * 1000)) >= MAX_SAMPLE_TIME_MS:
+            callback(MAX_SAMPLE_TIME_MS, MAX_SAMPLE_TIME_MS)
+            break
+        if callback is not None:
+            if do_sample:
+                callback(cur_time, MAX_SAMPLE_TIME_MS)
+            else:
+                callback(I + 1, TOTAL)
     return root, operation_cnts, node_cnt
 
 
