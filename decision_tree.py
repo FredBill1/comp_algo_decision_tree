@@ -8,7 +8,8 @@ from sorting_algorithms import SortingAlgorithm
 
 
 class DecisionTreeNode:
-    def __init__(self, parent: Optional["DecisionTreeNode"] = None, use_letter: bool = True, is_left: bool = False) -> None:
+    def __init__(self, node_id: int, parent: Optional["DecisionTreeNode"] = None, use_letter: bool = True, is_left: bool = False) -> None:
+        self.id = node_id
         self.arr: Optional[list[int]] = None
         self.cmp_xy: Optional[tuple[int, int]] = None
         self.actuals: list[tuple[int, ...]] = []
@@ -18,7 +19,7 @@ class DecisionTreeNode:
         self.edge_data = None
         if parent is not None:
             x, y = [chr(ord("a") + x) if use_letter else f"[{x}]" for x in parent.cmp_xy[:2]]
-            self.edge_data = {"data": dict(source=id(parent), target=id(self), cmp_op=f"{x}<{y}" if is_left else f"{x}>{y}")}
+            self.edge_data = {"data": dict(source=parent.id, target=self.id, cmp_op=f"{x}<{y}" if is_left else f"{x}>{y}")}
 
     def get_arr(self) -> str:
         return "(" + ",".join(chr(ord("a") + x) if len(self.arr) <= 26 else str(x) for x in self.arr) + ")"
@@ -35,9 +36,9 @@ class DecisionTreeNode:
 
     def node_data(self, show_full_labels: bool, classes: str) -> dict:
         label = self.label(LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
-        return {"data": {"id": id(self), "label": label, "pos": self.pos}, "classes": classes}
+        return {"data": {"id": self.id, "label": label, "pos": self.pos}, "classes": classes}
 
-    __slots__ = ["arr", "cmp_xy", "actuals", "left", "right", "pos", "edge_data"]
+    __slots__ = ["id", "arr", "cmp_xy", "actuals", "left", "right", "pos", "edge_data"]
 
 
 class NonDeterministicError(Exception):
@@ -50,9 +51,8 @@ class InvalidSortingAlgorithmError(Exception):
         super().__init__("Invalid sorting algorithm")
 
 
-def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[DecisionTreeNode, list[int], int]:
-    root = DecisionTreeNode()
-    node_cnt = 1
+def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int]]:
+    nodes = [DecisionTreeNode(0)]
 
     def cmp(x: int, y: int) -> int:
         if x > y:
@@ -86,7 +86,7 @@ def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Cal
         operation_cnts.append(operation_cnt)
         arrs.append([x for _, x in arr])
         cmp_xys.append(None)
-        node = root
+        node = nodes[0]
         for arr, cmp_xy in zip(arrs, cmp_xys):
             if node.arr is None:
                 node.arr = arr
@@ -106,13 +106,13 @@ def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Cal
 
             if cmp_xy[2]:  # x < y
                 if node.left is None:
-                    node.left = DecisionTreeNode(node, len(arr) <= 26, True)
-                    node_cnt += 1
+                    node.left = DecisionTreeNode(len(nodes), node, len(arr) <= 26, True)
+                    nodes.append(node.left)
                 node = node.left
             else:
                 if node.right is None:
-                    node.right = DecisionTreeNode(node, len(arr) <= 26, False)
-                    node_cnt += 1
+                    node.right = DecisionTreeNode(len(nodes), node, len(arr) <= 26, False)
+                    nodes.append(node.right)
                 node = node.right
         if do_sample and (cur_time := int((thread_time() - start_time) * 1000)) >= MAX_SAMPLE_TIME_MS:
             callback(MAX_SAMPLE_TIME_MS, MAX_SAMPLE_TIME_MS)
@@ -122,7 +122,7 @@ def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Cal
                 callback(cur_time, MAX_SAMPLE_TIME_MS)
             else:
                 callback(I + 1, TOTAL)
-    return root, operation_cnts, node_cnt
+    return nodes, operation_cnts
 
 
 def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
@@ -140,8 +140,8 @@ if __name__ == "__main__":
     from sorting_algorithms import sorting_algorithms
 
     N = 3
-    tree, operation_cnts, node_cnt = decision_tree(sorting_algorithms[0], N)
+    nodes, operation_cnts = decision_tree(sorting_algorithms[0], N)
     # tree = decision_tree(quick_sort, N)
     # tree = decision_tree(LomutoQS, N)
     # tree = decision_tree(merge_sort, N)
-    print_tree(tree)
+    print_tree(nodes[0])

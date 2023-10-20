@@ -1,5 +1,4 @@
 import base64
-import ctypes
 import traceback
 import zlib
 from collections import defaultdict, deque
@@ -13,15 +12,6 @@ import sortednp as snp
 from Config import *
 from decision_tree import DecisionTreeNode, decision_tree
 from sorting_algorithms import SortingAlgorithm, sorting_algorithms
-
-
-def node_data(node: DecisionTreeNode, show_full_labels: bool, classes: str) -> dict:
-    label = node.label(LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
-    return {"data": {"id": str(id(node)), "label": label}, "classes": classes}
-
-
-def node_from_id(node_id: int) -> DecisionTreeNode:
-    return ctypes.cast(node_id, ctypes.py_object).value
 
 
 class NodeHolder:
@@ -58,26 +48,26 @@ class NodeHolder:
 
     def _initialize(self, sorting_algo: SortingAlgorithm, N: int) -> None:
         try:
-            self.root, self.operation_cnts, self.node_cnt = decision_tree(sorting_algo, N, self.set_progress)
+            self.nodes, self.operation_cnts = decision_tree(sorting_algo, N, self.set_progress)
         except Exception as e:
             traceback.print_exc()
             self.initialize_scheduled.store(b"\x00", atomics.MemoryOrder.RELEASE)
             raise e
 
-    __slots__ = ["lock", "root", "operation_cnts", "node_cnt", "progress", "initialize_scheduled", "initialized_flag"]
+    __slots__ = ["lock", "nodes", "operation_cnts", "node_cnt", "progress", "initialize_scheduled", "initialized_flag"]
 
 
 class Nodes:
     cached: defaultdict[tuple[int, int], NodeHolder] = defaultdict(NodeHolder)
     cached_lock = Lock()
 
-    def __init__(self, element_holder: NodeHolder, visiblity_state: Optional[str]) -> None:
-        self.element_holder = element_holder
+    def __init__(self, node_holder: NodeHolder, visiblity_state: Optional[str]) -> None:
+        self.node_holder = node_holder
         if visiblity_state is not None:
             self.visiblity_state = self.decode_visiblity(visiblity_state)
         else:
-            self.visiblity_state = np.array([id(self.element_holder.root)], dtype=np.uintp)
-            self.expand_children(self.element_holder.root)
+            self.visiblity_state = np.array([0], dtype=np.int32)
+            self.expand_children(self.node_holder.nodes[0])
 
     @classmethod
     def get_node_holder(cls, sorting_algorithm_i: int, N: int) -> NodeHolder:
@@ -93,15 +83,15 @@ class Nodes:
 
     @staticmethod
     def decode_visiblity(visiblity: str) -> np.ndarray:
-        return np.frombuffer(zlib.decompress(base64.b85decode(visiblity)), dtype=np.uintp)
+        return np.frombuffer(zlib.decompress(base64.b85decode(visiblity)), dtype=np.int32)
 
-    def node_visiblity(self, node_id: int) -> bool:
-        i = self.visiblity_state.searchsorted(node_id)
-        return i < len(self.visiblity_state) and self.visiblity_state[i] == node_id
+    def node_visiblity(self, node: DecisionTreeNode) -> bool:
+        i = self.visiblity_state.searchsorted(node.id)
+        return i < len(self.visiblity_state) and self.visiblity_state[i] == node.id
 
     def node_has_hidden_child(self, node: DecisionTreeNode) -> bool:
         for child in (node.left, node.right):
-            if child is not None and not self.node_visiblity(id(child)):
+            if child is not None and not self.node_visiblity(child):
                 return True
         return False
 
@@ -117,11 +107,11 @@ class Nodes:
                 node = Q.popleft()
                 for child in (node.left, node.right):
                     if child is not None:
-                        update.append(id(child))
+                        update.append(child.id)
                         if depth < DISPLAY_DEPTH:
                             Q.append(child)
             depth += 1
-        update = np.array(update, dtype=np.uintp)
+        update = np.array(update, dtype=np.int32)
         update.sort()
         self.visiblity_state = snp.merge(self.visiblity_state, update, duplicates=snp.DROP)
 
@@ -132,15 +122,14 @@ class Nodes:
             node = Q.popleft()
             for child in (node.left, node.right):
                 if child is not None:
-                    child_id = id(child)
-                    i = self.visiblity_state.searchsorted(child_id)
-                    if i < len(self.visiblity_state) and self.visiblity_state[i] == child_id:
+                    i = self.visiblity_state.searchsorted(child.id)
+                    if i < len(self.visiblity_state) and self.visiblity_state[i] == child.id:
                         deletes.append(i)
                         Q.append(child)
         self.visiblity_state = np.delete(self.visiblity_state, deletes)
 
     def on_tap_node(self, node_id: int) -> None:
-        node = node_from_id(node_id)
+        node = self.node_holder.nodes[node_id]
         if self.node_is_leaf(node):
             return
         if self.node_has_hidden_child(node):
@@ -150,25 +139,25 @@ class Nodes:
 
     def expand_all(self) -> bool:
         elem: list[int] = []
-        Q = deque([self.element_holder.root])
+        Q = deque([self.node_holder.nodes[0]])
         tot = 1
         while Q and tot < MAX_ELEMENTS:
             node = Q.popleft()
-            elem.append(id(node))
+            elem.append(node.id)
             for child in (node.left, node.right):
                 if tot < MAX_ELEMENTS and child is not None:
                     tot += 1
                     Q.append(child)
-        self.visiblity_state = np.array(elem, dtype=np.uintp)
+        self.visiblity_state = np.array(elem, dtype=np.int32)
         self.visiblity_state.sort()
         return tot < MAX_ELEMENTS
 
     def visible_elements(self, show_full_labels: bool) -> list[dict]:
         ret = []
         for node_id in self.visiblity_state:
-            node = node_from_id(int(node_id))
+            node = self.node_holder.nodes[node_id]
             classes = "is_leaf" if self.node_is_leaf(node) else "has_hidden_child" if self.node_has_hidden_child(node) else ""
-            ret.append(node_data(node, show_full_labels, classes))
+            ret.append(node.node_data(show_full_labels, classes))
             if node.edge_data is not None:
                 ret.append(node.edge_data)
         return ret
