@@ -1,43 +1,11 @@
 "This module operates with Min-Heap"
 from collections.abc import Generator, Sequence
+from functools import cache
 from itertools import combinations
+from math import comb
 from random import randint, sample
-from threading import Lock
-
-import atomics
-
-
-class _Cache:
-    def __init__(self) -> None:
-        self.heap: list[list[int]] = []
-        self.lock = Lock()
-        self.initialized = atomics.atomic(1, atomics.BYTES)
-
-    __slots__ = ("heap", "lock", "initialized")
-
 
 max_N = 12
-
-# https://oeis.org/A056971
-_totals = (1, 1, 1, 2, 3, 8, 20, 80, 210, 896, 3360, 19200, 79200, 506880, 2745600, 21964800, 108108000, 820019200, 5227622400, 48881664000)
-_totals = _totals[: max_N + 1]
-_heap_cache = [_Cache() for _ in range(len(_totals))]
-_heap_cache[0].heap.append([])
-_heap_cache[1].heap.append([0])
-
-
-def heaps(N: int) -> list[list[int]]:
-    cache = _heap_cache[N]
-    if cache.initialized.load(atomics.MemoryOrder.RELAXED) != b"\x01":
-        with cache.lock:
-            if not cache.heap:
-                cache.heap = _construct(N)
-                cache.initialized.store(b"\x01", atomics.MemoryOrder.RELEASE)
-    return cache.heap
-
-
-def heaps_total(N: int) -> int | float:
-    return _totals[N] if N < len(_totals) else float("inf")
 
 
 def _sub_heap_sizes(N: int) -> tuple[int, int]:
@@ -48,7 +16,28 @@ def _sub_heap_sizes(N: int) -> tuple[int, int]:
     return L, R
 
 
-def _construct(N: int) -> list[list[int]]:
+def _merge_heap(root: int, heap_l: list[int], heap_r: list[int]) -> list[int]:
+    cur = [root]
+    i = 1
+    while i - 1 <= len(heap_l):
+        cur += heap_l[i - 1 : min((i << 1) - 1, len(heap_l))]
+        cur += heap_r[i - 1 : min((i << 1) - 1, len(heap_r))]
+        i <<= 1
+    return cur
+
+
+@cache
+def heaps_total(N: int) -> int:
+    if N <= 1:
+        return 1
+    L, R = _sub_heap_sizes(N)
+    return comb(L + R, L) * heaps_total(L) * heaps_total(R)
+
+
+@cache
+def heaps(N: int) -> list[list[int]]:
+    if N <= 1:
+        return [list(range(N))]
     L, R = _sub_heap_sizes(N)
     res = []
     for map_l in combinations(range(1, N), L):
@@ -80,16 +69,6 @@ def is_heap(arr: Sequence[int]) -> bool:
 
 
 "The semi-heaps here will become real heaps after the root node being pushed down"
-
-
-def _merge_heap(root: int, heap_l: list[int], heap_r: list[int]) -> list[int]:
-    cur = [root]
-    i = 1
-    while i - 1 <= len(heap_l):
-        cur += heap_l[i - 1 : min((i << 1) - 1, len(heap_l))]
-        cur += heap_r[i - 1 : min((i << 1) - 1, len(heap_r))]
-        i <<= 1
-    return cur
 
 
 def semi_heaps(N: int) -> Generator[list[int], None, None]:

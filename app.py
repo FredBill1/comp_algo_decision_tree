@@ -1,5 +1,6 @@
 import inspect
 from dataclasses import dataclass, field, fields
+from math import log2
 from typing import Optional
 
 import dash_bootstrap_components as dbc
@@ -77,8 +78,8 @@ def on_data(
     if input_N is None:
         return ret.to_list()
     ret.last_tree_param__data = [int(sorting_algorithm_i), int(input_N)]
-    if ret.last_tree_param__data != last_tree_param and sorting_algorithms[int(sorting_algorithm_i)].max_N < int(input_N):
-        sorting_algorithm = sorting_algorithms[int(sorting_algorithm_i)]
+    sorting_algorithm = sorting_algorithms[int(sorting_algorithm_i)]
+    if ret.last_tree_param__data != last_tree_param and sorting_algorithm.max_N < int(input_N):
         ret.notifications_container__children = dmc.Notification(
             id="warning_notification",
             title="Warning",
@@ -120,7 +121,19 @@ def on_data(
         ret.statistics_graph__figure = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
         ret.statistics_graph__figure.layout.update(showlegend=False)
         ret.statistics_modal__is_open = True
-        ret.statistics_table__data = [{"Best": data.min(), "Worst": data.max(), "Average": f"{data.mean():.2f}"}]
+        input_total = sorting_algorithm.input_total(int(input_N))
+        output_total = sorting_algorithm.output_total(int(input_N))
+        lower_bound = log2(input_total / output_total)
+        ret.statistics_table__data = [
+            {
+                "||Input||": input_total,
+                "||Output||": output_total,
+                "Lower Bound": f"Ω({lower_bound:.2f})",
+                "Best": data.min(),
+                "Worst": data.max(),
+                "Average": f"{data.mean():.2f}",
+            }
+        ]
     elif trigger_id == "cytoscape":
         nodes.on_tap_node(int(node["data"]["id"]))
     elif trigger_id == "expand_all" or buffered_input == "expand_all":
@@ -248,7 +261,7 @@ statistics_modal = dbc.Modal(
                 dash_table.DataTable(
                     id="statistics_table",
                     style_cell={"textAlign": "center"},
-                    columns=[{"name": x, "id": x} for x in ("Best", "Worst", "Average")],
+                    columns=[{"name": x, "id": x} for x in ("||Input||", "||Output||", "Lower Bound", "Best", "Worst", "Average")],
                 ),
             ]
         ),

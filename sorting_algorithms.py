@@ -19,7 +19,8 @@ class SortingAlgorithm(NamedTuple):
     func: Callable[[list], None]
     max_N: int
     generator: Callable[[int], Iterable[Sequence[int]]] = lambda n: permutations(range(n))
-    total: Callable[[int], int | float] = factorial
+    input_total: Callable[[int], int] = factorial
+    output_total: Callable[[int], int] = lambda _: 1
     sampler: Callable[[int], Generator[Sequence[int], None, None]] = _sampler
     validator: Callable[[Iterable[int]], bool] = lambda arr: all(i == v for i, v in enumerate(arr))
 
@@ -155,6 +156,7 @@ sorting_algorithms = [
         heaps.max_N,
         heaps.semi_heaps,
         heaps.semi_heaps_total,
+        heaps.heaps_total,
         heaps.semi_heap_sampler,
         lambda arr: heaps.is_heap(tuple(arr)),
     ),

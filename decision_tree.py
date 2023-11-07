@@ -66,7 +66,7 @@ def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Cal
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
     do_sample = N > sorting_algo.max_N
-    TOTAL = 1 if do_sample else sorting_algo.total(N)
+    TOTAL = 1 if do_sample else sorting_algo.input_total(N)
     if callback is not None:
         if do_sample:
             callback(0, MAX_SAMPLE_TIME_MS)
