@@ -1,4 +1,4 @@
-from ..SortingAlgorithm import SortingAlgorithm
+from ..CmpAlgorithm import CmpAlgorithm
 
 
 def bubble_sort(arr: list) -> None:
@@ -8,4 +8,4 @@ def bubble_sort(arr: list) -> None:
                 arr[j], arr[j + 1] = arr[j + 1], arr[j]
 
 
-algorithm = SortingAlgorithm("bubble sort", bubble_sort, 8)
+algorithm = CmpAlgorithm("bubble sort", bubble_sort, 8)

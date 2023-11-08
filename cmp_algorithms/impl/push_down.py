@@ -5,7 +5,7 @@ from itertools import combinations
 from math import comb
 from random import randint, sample
 
-from ..SortingAlgorithm import SortingAlgorithm
+from ..CmpAlgorithm import CmpAlgorithm
 
 max_N = 12
 
@@ -122,7 +122,7 @@ def push_down(arr: list) -> None:
             break
 
 
-algorithm = SortingAlgorithm(
+algorithm = CmpAlgorithm(
     "push down",
     push_down,
     max_N,

@@ -1,4 +1,4 @@
-from ..SortingAlgorithm import SortingAlgorithm
+from ..CmpAlgorithm import CmpAlgorithm
 
 
 def heap_sort(arr: list) -> None:
@@ -21,4 +21,4 @@ def heap_sort(arr: list) -> None:
         push_down(0, i)
 
 
-algorithm = SortingAlgorithm("heap sort", heap_sort, 9)
+algorithm = CmpAlgorithm("heap sort", heap_sort, 9)

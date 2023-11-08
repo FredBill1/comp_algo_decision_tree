@@ -9,9 +9,9 @@ import atomics
 import numpy as np
 import sortednp as snp
 
+from cmp_algorithms.cmp_algorithms import CmpAlgorithm, cmp_algorithms
 from Config import *
 from decision_tree import DecisionTreeNode, decision_tree
-from sorting_algorithms.sorting_algorithms import SortingAlgorithm, sorting_algorithms
 
 
 class NodeHolder:
@@ -32,12 +32,12 @@ class NodeHolder:
     def set_progress(self, i: int, total: int):
         self.progress.store((i << 32) | total, atomics.MemoryOrder.RELAXED)
 
-    def initialize(self, sorting_algorithm_i: int, N: int) -> None:
+    def initialize(self, cmp_algorithm_i: int, N: int) -> None:
         with self.lock:
-            sorting_algo = sorting_algorithms[sorting_algorithm_i]
-            print(f"init: `{sorting_algo.name}` with {N} elements")
-            self._initialize(sorting_algo, N)
-            print(f"fin:  `{sorting_algo.name}` with {N} elements")
+            cmp_algo = cmp_algorithms[cmp_algorithm_i]
+            print(f"init: `{cmp_algo.name}` with {N} elements")
+            self._initialize(cmp_algo, N)
+            print(f"fin:  `{cmp_algo.name}` with {N} elements")
             self.initialized_flag.store(b"\x01", atomics.MemoryOrder.RELEASE)
 
     def wait_until_initialized(self) -> None:
@@ -46,9 +46,9 @@ class NodeHolder:
         with self.lock:
             pass
 
-    def _initialize(self, sorting_algo: SortingAlgorithm, N: int) -> None:
+    def _initialize(self, cmp_algo: CmpAlgorithm, N: int) -> None:
         try:
-            self.nodes, self.operation_cnts = decision_tree(sorting_algo, N, self.set_progress)
+            self.nodes, self.operation_cnts = decision_tree(cmp_algo, N, self.set_progress)
         except Exception as e:
             traceback.print_exc()
             self.initialize_scheduled.store(b"\x00", atomics.MemoryOrder.RELEASE)
@@ -70,9 +70,9 @@ class Nodes:
             self.expand_children(self.node_holder.nodes[0])
 
     @classmethod
-    def get_node_holder(cls, sorting_algorithm_i: int, N: int) -> NodeHolder:
+    def get_node_holder(cls, cmp_algorithm_i: int, N: int) -> NodeHolder:
         with cls.cached_lock:
-            return cls.cached[(sorting_algorithm_i, N)]
+            return cls.cached[(cmp_algorithm_i, N)]
 
     def get_visiblity_state(self) -> str:
         return self.encode_visiblity(self.visiblity_state)

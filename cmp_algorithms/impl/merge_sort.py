@@ -1,4 +1,4 @@
-from ..SortingAlgorithm import SortingAlgorithm
+from ..CmpAlgorithm import CmpAlgorithm
 
 
 def merge_sort(arr: list) -> None:
@@ -28,4 +28,4 @@ def merge_sort(arr: list) -> None:
     impl(arr, 0, len(arr) - 1)
 
 
-algorithm = SortingAlgorithm("merge sort", merge_sort, 9)
+algorithm = CmpAlgorithm("merge sort", merge_sort, 9)

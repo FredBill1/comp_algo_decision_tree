@@ -1,4 +1,4 @@
-from ..SortingAlgorithm import SortingAlgorithm
+from ..CmpAlgorithm import CmpAlgorithm
 
 
 def selection_sort(arr: list) -> None:
@@ -11,4 +11,4 @@ def selection_sort(arr: list) -> None:
             arr[k], arr[i] = arr[i], arr[k]
 
 
-algorithm = SortingAlgorithm("selection sort", selection_sort, 8)
+algorithm = CmpAlgorithm("selection sort", selection_sort, 8)

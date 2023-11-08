@@ -1,4 +1,4 @@
-from ..SortingAlgorithm import SortingAlgorithm
+from ..CmpAlgorithm import CmpAlgorithm
 
 
 def insertion_sort(arr: list) -> None:
@@ -9,4 +9,4 @@ def insertion_sort(arr: list) -> None:
             j -= 1
 
 
-algorithm = SortingAlgorithm("insertion sort", insertion_sort, 9)
+algorithm = CmpAlgorithm("insertion sort", insertion_sort, 9)

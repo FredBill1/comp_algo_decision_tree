@@ -13,9 +13,9 @@ from dash import Dash, Input, Output, State, callback, ctx, dash_table, dcc, htm
 from dash_iconify import DashIconify
 from flask_executor import Executor
 
+from cmp_algorithms.cmp_algorithms import cmp_algorithms
 from Config import *
 from Nodes import Nodes
-from sorting_algorithms.sorting_algorithms import sorting_algorithms
 
 
 @dataclass
@@ -50,7 +50,7 @@ class OnDataCallbackOutput:
 @callback(
     OnDataCallbackOutput.outputs(),
     Input("visiblity_state", "data"),
-    Input("sorting_algorithm", "value"),
+    Input("cmp_algorithm", "value"),
     Input("input_N", "value"),
     Input("show_full_labels", "value"),
     Input("cytoscape", "tapNode"),
@@ -63,7 +63,7 @@ class OnDataCallbackOutput:
 )
 def on_data(
     visiblity_state: Optional[str],
-    sorting_algorithm_i: str,
+    cmp_algorithm_i: str,
     input_N: Optional[str],
     show_full_labels: list,
     node: dict,
@@ -77,29 +77,29 @@ def on_data(
     ret = OnDataCallbackOutput()
     if input_N is None:
         return ret.to_list()
-    ret.last_tree_param__data = [int(sorting_algorithm_i), int(input_N)]
-    sorting_algorithm = sorting_algorithms[int(sorting_algorithm_i)]
-    if ret.last_tree_param__data != last_tree_param and sorting_algorithm.max_N < int(input_N):
+    ret.last_tree_param__data = [int(cmp_algorithm_i), int(input_N)]
+    cmp_algorithm = cmp_algorithms[int(cmp_algorithm_i)]
+    if ret.last_tree_param__data != last_tree_param and cmp_algorithm.max_N < int(input_N):
         ret.notifications_container__children = dmc.Notification(
             id="warning_notification",
             title="Warning",
             action="show",
-            message=f"Input `N={input_N}` is too large (upper limit for `{sorting_algorithm.name}` is {sorting_algorithm.max_N}), "
+            message=f"Input `N={input_N}` is too large (upper limit for `{cmp_algorithm.name}` is {cmp_algorithm.max_N}), "
             f"using the results from random sampling for {MAX_SAMPLE_TIME_MS / 1000:.1f}s instead.",
             icon=DashIconify(icon="material-symbols:warning"),
             autoClose=10000,
         )
 
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    if trigger_id in ("sorting_algorithm", "input_N", "reset"):
+    if trigger_id in ("cmp_algorithm", "input_N", "reset"):
         visiblity_state = None
 
-    node_holder = Nodes.get_node_holder(int(sorting_algorithm_i), int(input_N))
+    node_holder = Nodes.get_node_holder(int(cmp_algorithm_i), int(input_N))
     ret.progress__value, ret.progress__max = i, total = node_holder.get_progress()
     ret.progress__label = f"{i}/{total}"
     if i != total:
         if not node_holder.get_and_set_initialize_scheduled():
-            executor.submit(node_holder.initialize, int(sorting_algorithm_i), int(input_N))
+            executor.submit(node_holder.initialize, int(cmp_algorithm_i), int(input_N))
         if trigger_id == "expand_all":
             ret.buffered_input__data = "expand_all"
         elif trigger_id == "show_statistics":
@@ -121,8 +121,8 @@ def on_data(
         ret.statistics_graph__figure = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
         ret.statistics_graph__figure.layout.update(showlegend=False)
         ret.statistics_modal__is_open = True
-        input_total = sorting_algorithm.input_total(int(input_N))
-        output_total = sorting_algorithm.output_total(int(input_N))
+        input_total = cmp_algorithm.input_total(int(input_N))
+        output_total = cmp_algorithm.output_total(int(input_N))
         lower_bound = log2(input_total / output_total)
         ret.statistics_table__data = [
             {
@@ -161,14 +161,14 @@ def on_input_N_invalid(input_N: Optional[str]):
     Output("code_modal", "children"),
     Output("control_loading_output", "children", allow_duplicate=True),
     Input("show_code", "n_clicks"),
-    State("sorting_algorithm", "value"),
+    State("cmp_algorithm", "value"),
     prevent_initial_call=True,
 )
-def on_show_code(_show_code: int, sorting_algorithm_i: str):
-    sorting_algo = sorting_algorithms[int(sorting_algorithm_i)]
-    code = inspect.getsource(sorting_algo.func).strip()
+def on_show_code(_show_code: int, cmp_algorithm_i: str):
+    cmp_algo = cmp_algorithms[int(cmp_algorithm_i)]
+    code = inspect.getsource(cmp_algo.func).strip()
     children = [
-        dbc.ModalHeader(dbc.ModalTitle(sorting_algo.name)),
+        dbc.ModalHeader(dbc.ModalTitle(cmp_algo.name)),
         dbc.ModalBody(dcc.Markdown(f"```python\n{code}\n```"), style={"margin": "auto"}),
     ]
     return [True, children, ""]
@@ -180,12 +180,12 @@ control_panel = html.Div(
         dbc.Button("Reset", id="reset", disabled=True),
         dbc.Row(
             [
-                "Sorting Algorithm:",
+                "Cmp Algorithm:",
                 dbc.Select(
-                    options=[{"label": sorting_algo.name, "value": i} for i, sorting_algo in enumerate(sorting_algorithms)],
-                    id="sorting_algorithm",
+                    options=[{"label": cmp_algo.name, "value": i} for i, cmp_algo in enumerate(cmp_algorithms)],
+                    id="cmp_algorithm",
                     style={"width": "12rem"},
-                    value=str(SORTING_ALGORITHM_I),
+                    value=str(CMP_ALGORITHM_I),
                     persistence=True,
                     persistence_type=USER_STATE_STORAGE_TYPE,
                 ),

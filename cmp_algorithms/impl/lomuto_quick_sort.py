@@ -1,4 +1,4 @@
-from ..SortingAlgorithm import SortingAlgorithm
+from ..CmpAlgorithm import CmpAlgorithm
 
 
 def lomuto_quick_sort(arr: list) -> None:
@@ -21,4 +21,4 @@ def lomuto_quick_sort(arr: list) -> None:
     impl(arr, 0, len(arr) - 1)
 
 
-algorithm = SortingAlgorithm("Lomuto quick sort", lomuto_quick_sort, 9)
+algorithm = CmpAlgorithm("Lomuto quick sort", lomuto_quick_sort, 9)

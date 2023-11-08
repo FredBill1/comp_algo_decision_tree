@@ -3,8 +3,8 @@ from functools import cmp_to_key
 from time import thread_time
 from typing import Optional
 
+from cmp_algorithms.cmp_algorithms import CmpAlgorithm
 from Config import *
-from sorting_algorithms.sorting_algorithms import SortingAlgorithm
 
 
 class DecisionTreeNode:
@@ -43,15 +43,15 @@ class DecisionTreeNode:
 
 class NonDeterministicError(Exception):
     def __init__(self) -> None:
-        super().__init__("Non-deterministic sorting algorithm")
+        super().__init__("Non-deterministic cmp algorithm")
 
 
-class InvalidSortingAlgorithmError(Exception):
+class InvalidCmpAlgorithmError(Exception):
     def __init__(self) -> None:
-        super().__init__("Invalid sorting algorithm")
+        super().__init__("Invalid cmp algorithm")
 
 
-def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int]]:
+def decision_tree(cmp_algo: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int]]:
     nodes = [DecisionTreeNode(0)]
 
     def cmp(x: int, y: int) -> int:
@@ -65,8 +65,8 @@ def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Cal
             cmp_xys.append((x, y, actual[x] < actual[y]))
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
-    do_sample = N > sorting_algo.max_N
-    TOTAL = 1 if do_sample else sorting_algo.input_total(N)
+    do_sample = N > cmp_algo.max_N
+    TOTAL = 1 if do_sample else cmp_algo.input_total(N)
     if callback is not None:
         if do_sample:
             callback(0, MAX_SAMPLE_TIME_MS)
@@ -75,14 +75,14 @@ def decision_tree(sorting_algo: SortingAlgorithm, N: int, callback: Optional[Cal
     operation_cnts = []
     key = cmp_to_key(cmp)
     start_time = thread_time()
-    for I, actual in enumerate(sorting_algo.sampler(N) if do_sample else sorting_algo.generator(N)):
+    for I, actual in enumerate(cmp_algo.sampler(N) if do_sample else cmp_algo.generator(N)):
         arrs = []
         cmp_xys = []
         arr = [(key(x), x) for x in range(N)]
         operation_cnt = 0
-        sorting_algo.func(arr)
-        if not sorting_algo.validator(actual[x] for _, x in arr):
-            raise InvalidSortingAlgorithmError
+        cmp_algo.func(arr)
+        if not cmp_algo.validator(actual[x] for _, x in arr):
+            raise InvalidCmpAlgorithmError
         operation_cnts.append(operation_cnt)
         arrs.append([x for _, x in arr])
         cmp_xys.append(None)
@@ -137,10 +137,10 @@ def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
 
 
 if __name__ == "__main__":
-    from sorting_algorithms.sorting_algorithms import sorting_algorithms
+    from cmp_algorithms.cmp_algorithms import cmp_algorithms
 
     N = 3
-    nodes, operation_cnts = decision_tree(sorting_algorithms[0], N)
+    nodes, operation_cnts = decision_tree(cmp_algorithms[0], N)
     # tree = decision_tree(quick_sort, N)
     # tree = decision_tree(LomutoQS, N)
     # tree = decision_tree(merge_sort, N)

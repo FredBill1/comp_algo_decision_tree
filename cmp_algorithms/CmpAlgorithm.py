@@ -12,7 +12,7 @@ def _sampler(N: int) -> Generator[list[int], None, None]:
         yield arr
 
 
-class SortingAlgorithm(NamedTuple):
+class CmpAlgorithm(NamedTuple):
     name: str
     func: Callable[[list], None]
     max_N: int

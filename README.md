@@ -1,4 +1,4 @@
-# Decision Tree for Sorting Algorithms
+# Decision Tree for Cmp Algorithms
 
 ## Setup Environment
 
