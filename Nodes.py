@@ -49,13 +49,11 @@ class NodeHolder:
 
     def _initialize(self, cmp_algorithm: CmpAlgorithm, N: int) -> None:
         try:
-            self.nodes, self.operation_cnts = decision_tree(cmp_algorithm, N, self.set_progress)
+            self.nodes, self.operation_cnts, self.leaf_cnt = decision_tree(cmp_algorithm, N, self.set_progress)
         except Exception as e:
             traceback.print_exc()
             self.initialize_scheduled.store(b"\x00", atomics.MemoryOrder.RELEASE)
             raise e
-
-    __slots__ = ["lock", "nodes", "operation_cnts", "node_cnt", "progress", "initialize_scheduled", "initialized_flag"]
 
 
 class Nodes:

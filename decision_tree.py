@@ -51,7 +51,7 @@ class InvalidCmpAlgorithmError(Exception):
         super().__init__("Invalid cmp algorithm")
 
 
-def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int]]:
+def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int], int]:
     nodes = [DecisionTreeNode(0)]
 
     def cmp(x: int, y: int) -> int:
@@ -75,6 +75,7 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
     operation_cnts = []
     key = cmp_to_key(cmp)
     start_time = thread_time()
+    leaf_cnt = 0
     for I, actual in enumerate(cmp_algorithm.sampler(N) if do_sample else cmp_algorithm.generator(N)):
         arrs = []
         cmp_xys = []
@@ -87,7 +88,8 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         arrs.append([x for _, x in arr])
         cmp_xys.append(None)
         node = nodes[0]
-        for arr, cmp_xy in zip(arrs, cmp_xys):
+        is_new_node = I == 0
+        for J, (arr, cmp_xy) in enumerate(zip(arrs, cmp_xys)):
             if node.arr is None:
                 node.arr = arr
             elif node.arr != arr:
@@ -95,24 +97,30 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
             if len(node.actuals) < ACTUALS_MAX_LENGTH:
                 node.actuals.append(actual)
 
-            if cmp_xy is None:
+            if J == len(arrs) - 1:
                 if node.cmp_xy is not None:
                     raise NonDeterministicError
-                continue
+                if is_new_node:
+                    leaf_cnt += 1
+                break
+
             if node.cmp_xy is None:
                 node.cmp_xy = cmp_xy[:2]
             elif node.cmp_xy != cmp_xy[:2]:
                 raise NonDeterministicError
 
+            is_new_node = False
             if cmp_xy[2]:  # x < y
                 if node.left is None:
                     node.left = DecisionTreeNode(len(nodes), node, len(arr) <= 26, True)
                     nodes.append(node.left)
+                    is_new_node = True
                 node = node.left
             else:
                 if node.right is None:
                     node.right = DecisionTreeNode(len(nodes), node, len(arr) <= 26, False)
                     nodes.append(node.right)
+                    is_new_node = True
                 node = node.right
         if do_sample and (cur_time := int((thread_time() - start_time) * 1000)) >= MAX_SAMPLE_TIME_MS:
             callback(MAX_SAMPLE_TIME_MS, MAX_SAMPLE_TIME_MS)
@@ -122,7 +130,7 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
                 callback(cur_time, MAX_SAMPLE_TIME_MS)
             else:
                 callback(I + 1, TOTAL)
-    return nodes, operation_cnts
+    return nodes, operation_cnts, leaf_cnt
 
 
 def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
@@ -140,8 +148,5 @@ if __name__ == "__main__":
     from cmp_algorithms.cmp_algorithms import cmp_algorithms
 
     N = 3
-    nodes, operation_cnts = decision_tree(cmp_algorithms[0], N)
-    # tree = decision_tree(quick_sort, N)
-    # tree = decision_tree(LomutoQS, N)
-    # tree = decision_tree(merge_sort, N)
+    nodes, operation_cnts, leaf_cnt = decision_tree(cmp_algorithms[0], N)
     print_tree(nodes[0])

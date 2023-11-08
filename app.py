@@ -1,5 +1,6 @@
 import inspect
 from dataclasses import dataclass, field, fields
+from decimal import Decimal
 from math import log2
 from typing import Optional
 
@@ -96,8 +97,8 @@ def on_data(
 
     node_holder = Nodes.get_node_holder(int(cmp_algorithm_i), int(input_N))
     ret.progress__value, ret.progress__max = i, total = node_holder.get_progress()
-    ret.progress__label = f"{i}/{total}"
     if i != total:
+        ret.progress__label = f"{i}/{total}"
         if not node_holder.get_and_set_initialize_scheduled():
             executor.submit(node_holder.initialize, int(cmp_algorithm_i), int(input_N))
         if trigger_id == "expand_all":
@@ -110,6 +111,8 @@ def on_data(
         ret.progress_interval__disabled = False
         ret.control_loading__style = {"visibility": "hidden"}
         return ret.to_list()
+    else:
+        ret.progress__label = Decimal(node_holder.leaf_cnt).to_eng_string()
     ret.show_statistics__disabled = False
     ret.expand_all__disabled = False
     ret.reset__disabled = False
@@ -129,6 +132,7 @@ def on_data(
                 "||Input||": input_total,
                 "||Output||": output_total,
                 "Lower Bound": f"Ω({lower_bound:.2f})",
+                "Leaf Count": node_holder.leaf_cnt,
                 "Best": data.min(),
                 "Worst": data.max(),
                 "Average": f"{data.mean():.2f}",
@@ -261,7 +265,7 @@ statistics_modal = dbc.Modal(
                 dash_table.DataTable(
                     id="statistics_table",
                     style_cell={"textAlign": "center"},
-                    columns=[{"name": x, "id": x} for x in ("||Input||", "||Output||", "Lower Bound", "Best", "Worst", "Average")],
+                    columns=[{"name": x, "id": x} for x in ("||Input||", "||Output||", "Lower Bound", "Leaf Count", "Best", "Worst", "Average")],
                 ),
             ]
         ),
