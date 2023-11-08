@@ -165,10 +165,10 @@ def on_input_N_invalid(input_N: Optional[str]):
     prevent_initial_call=True,
 )
 def on_show_code(_show_code: int, cmp_algorithm_i: str):
-    cmp_algo = cmp_algorithms[int(cmp_algorithm_i)]
-    code = inspect.getsource(cmp_algo.func).strip()
+    cmp_algorithm = cmp_algorithms[int(cmp_algorithm_i)]
+    code = inspect.getsource(cmp_algorithm.func).strip()
     children = [
-        dbc.ModalHeader(dbc.ModalTitle(cmp_algo.name)),
+        dbc.ModalHeader(dbc.ModalTitle(cmp_algorithm.name)),
         dbc.ModalBody(dcc.Markdown(f"```python\n{code}\n```"), style={"margin": "auto"}),
     ]
     return [True, children, ""]
@@ -182,7 +182,7 @@ control_panel = html.Div(
             [
                 "Cmp Algorithm:",
                 dbc.Select(
-                    options=[{"label": cmp_algo.name, "value": i} for i, cmp_algo in enumerate(cmp_algorithms)],
+                    options=[{"label": cmp_algorithm.name, "value": i} for i, cmp_algorithm in enumerate(cmp_algorithms)],
                     id="cmp_algorithm",
                     style={"width": "12rem"},
                     value=str(CMP_ALGORITHM_I),

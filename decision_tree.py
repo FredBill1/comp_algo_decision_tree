@@ -3,7 +3,7 @@ from functools import cmp_to_key
 from time import thread_time
 from typing import Optional
 
-from cmp_algorithms.cmp_algorithms import CmpAlgorithm
+from cmp_algorithms.CmpAlgorithm import CmpAlgorithm
 from Config import *
 
 
@@ -51,7 +51,7 @@ class InvalidCmpAlgorithmError(Exception):
         super().__init__("Invalid cmp algorithm")
 
 
-def decision_tree(cmp_algo: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int]]:
+def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int]]:
     nodes = [DecisionTreeNode(0)]
 
     def cmp(x: int, y: int) -> int:
@@ -65,8 +65,8 @@ def decision_tree(cmp_algo: CmpAlgorithm, N: int, callback: Optional[Callable[[i
             cmp_xys.append((x, y, actual[x] < actual[y]))
         return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
 
-    do_sample = N > cmp_algo.max_N
-    TOTAL = 1 if do_sample else cmp_algo.input_total(N)
+    do_sample = N > cmp_algorithm.max_N
+    TOTAL = 1 if do_sample else cmp_algorithm.input_total(N)
     if callback is not None:
         if do_sample:
             callback(0, MAX_SAMPLE_TIME_MS)
@@ -75,13 +75,13 @@ def decision_tree(cmp_algo: CmpAlgorithm, N: int, callback: Optional[Callable[[i
     operation_cnts = []
     key = cmp_to_key(cmp)
     start_time = thread_time()
-    for I, actual in enumerate(cmp_algo.sampler(N) if do_sample else cmp_algo.generator(N)):
+    for I, actual in enumerate(cmp_algorithm.sampler(N) if do_sample else cmp_algorithm.generator(N)):
         arrs = []
         cmp_xys = []
         arr = [(key(x), x) for x in range(N)]
         operation_cnt = 0
-        cmp_algo.func(arr)
-        if not cmp_algo.validator(actual[x] for _, x in arr):
+        cmp_algorithm.func(arr)
+        if not cmp_algorithm.validator(actual[x] for _, x in arr):
             raise InvalidCmpAlgorithmError
         operation_cnts.append(operation_cnt)
         arrs.append([x for _, x in arr])
