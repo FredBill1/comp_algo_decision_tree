@@ -4,7 +4,7 @@ from time import thread_time
 from typing import Optional
 
 from Config import *
-from sorting_algorithms import SortingAlgorithm
+from sorting_algorithms.sorting_algorithms import SortingAlgorithm
 
 
 class DecisionTreeNode:
@@ -137,7 +137,7 @@ def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
 
 
 if __name__ == "__main__":
-    from sorting_algorithms import sorting_algorithms
+    from sorting_algorithms.sorting_algorithms import sorting_algorithms
 
     N = 3
     nodes, operation_cnts = decision_tree(sorting_algorithms[0], N)

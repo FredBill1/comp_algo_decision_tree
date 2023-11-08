@@ -11,7 +11,7 @@ import sortednp as snp
 
 from Config import *
 from decision_tree import DecisionTreeNode, decision_tree
-from sorting_algorithms import SortingAlgorithm, sorting_algorithms
+from sorting_algorithms.sorting_algorithms import SortingAlgorithm, sorting_algorithms
 
 
 class NodeHolder:

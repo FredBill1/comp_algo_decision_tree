@@ -15,7 +15,7 @@ from flask_executor import Executor
 
 from Config import *
 from Nodes import Nodes
-from sorting_algorithms import sorting_algorithms
+from sorting_algorithms.sorting_algorithms import sorting_algorithms
 
 
 @dataclass

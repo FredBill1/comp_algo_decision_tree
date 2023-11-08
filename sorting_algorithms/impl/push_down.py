@@ -5,6 +5,8 @@ from itertools import combinations
 from math import comb
 from random import randint, sample
 
+from ..SortingAlgorithm import SortingAlgorithm
+
 max_N = 12
 
 
@@ -118,6 +120,18 @@ def push_down(arr: list) -> None:
             k = j
         else:
             break
+
+
+algorithm = SortingAlgorithm(
+    "push down",
+    push_down,
+    max_N,
+    semi_heaps,
+    semi_heaps_total,
+    heaps_total,
+    semi_heap_sampler,
+    lambda arr: is_heap(tuple(arr)),
+)
 
 
 if __name__ == "__main__":
