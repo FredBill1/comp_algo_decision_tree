@@ -100,20 +100,8 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
     return nodes, operation_cnts, leaf_cnt
 
 
-def print_tree(node: DecisionTreeNode, level: int = 0, op: str = "") -> None:
-    if node.cmp_xy is not None:
-        x, y = [chr(ord("a") + x) for x in node.cmp_xy]
-
-    if node.left is not None:
-        print_tree(node.left, level + 1, f"[{x}<{y}]")
-    print("\n" + " " * (level * 8) + f"-{op}->", node.get_arr(), node.actuals, "\n")
-    if node.right is not None:
-        print_tree(node.right, level + 1, f"[{x}>{y}]")
-
-
 if __name__ == "__main__":
     from cmp_algorithms.cmp_algorithms import cmp_algorithms
 
     N = 3
     nodes, operation_cnts, leaf_cnt = decision_tree(cmp_algorithms[0], N)
-    print_tree(nodes[0])

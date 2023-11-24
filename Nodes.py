@@ -35,10 +35,10 @@ class NodeHolder:
 
     def initialize(self, cmp_algorithm_i: int, N: int) -> None:
         with self.lock:
-            cmp_algorithm = cmp_algorithms[cmp_algorithm_i]
-            print(f"init: `{cmp_algorithm.name}` with {N} elements")
-            self._initialize(cmp_algorithm, N)
-            print(f"fin:  `{cmp_algorithm.name}` with {N} elements")
+            self.cmp_algorithm = cmp_algorithms[cmp_algorithm_i]
+            print(f"init: `{self.cmp_algorithm.name}` with {N} elements")
+            self._initialize(self.cmp_algorithm, N)
+            print(f"fin:  `{self.cmp_algorithm.name}` with {N} elements")
             self.initialized_flag.store(b"\x01", atomics.MemoryOrder.RELEASE)
 
     def wait_until_initialized(self) -> None:
@@ -154,9 +154,11 @@ class Nodes:
     def visible_elements(self, show_full_labels: bool) -> list[dict]:
         ret = []
         for node_id in self.visiblity_state:
-            node = self.node_holder.nodes[node_id]
+            node: DecisionTreeNode = self.node_holder.nodes[node_id]
             classes = "is_leaf" if self.node_is_leaf(node) else "has_hidden_child" if self.node_has_hidden_child(node) else ""
-            ret.append(node.node_data(show_full_labels, classes))
+            label = self.node_holder.cmp_algorithm.get_label(node, LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
+            node_data = {"data": {"id": node.id, "label": label, "pos": node.pos}, "classes": classes}
+            ret.append(node_data)
             if node.edge_data is not None:
                 ret.append(node.edge_data)
         return ret
