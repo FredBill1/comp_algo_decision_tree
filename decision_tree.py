@@ -1,9 +1,8 @@
 from collections.abc import Callable
-from functools import cmp_to_key
 from time import thread_time
 from typing import Optional
 
-from cmp_algorithms.CmpAlgorithm import CmpAlgorithm
+from cmp_algorithms.CmpAlgorithm import CmpAlgorithm, IdxVal
 from Config import *
 from DecisionTreeNode import DecisionTreeNode
 
@@ -18,19 +17,45 @@ class InvalidCmpAlgorithmError(Exception):
         super().__init__("Invalid cmp algorithm")
 
 
+# copy from functools.cmp_to_key
+# since member "obj" is not present in the documentation, it is not guaranteed to be exist in the future
+# fmt: off
+def cmp_to_key(mycmp):
+    """Convert a cmp= function into a key= function"""
+    class K(object):
+        __slots__ = ['obj']
+        def __init__(self, obj):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        __hash__ = None
+    return K
+# fmt: on
+
+
 def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int], int]:
     nodes = [DecisionTreeNode(0)]
 
-    def cmp(x: int, y: int) -> int:
-        if x > y:
+    def cmp(x: IdxVal, y: IdxVal) -> int:
+        if x.idx > y.idx:
             return -cmp(y, x)
-        cur_cmp_xy = (x, y, actual[x] < actual[y])
-        if not (arrs and cur_cmp_xy == cmp_xys[-1]):
+        cur_cmp_xy = (x.idx, y.idx, x.val < y.val)
+        if not (idx_arrays and cur_cmp_xy == cmp_xys[-1]):
             nonlocal operation_cnt
             operation_cnt += 1
-            arrs.append([x for _, x in arr])
-            cmp_xys.append((x, y, actual[x] < actual[y]))
-        return 1 if actual[x] > actual[y] else -1 if actual[x] < actual[y] else 0
+            idx_arrays.append(cmp_algorithm.map(lambda x: x.obj.idx, idx_array))
+            cmp_xys.append(cur_cmp_xy)
+        return 1 if x.val > y.val else -1 if x.val < y.val else 0
+
+    key = cmp_to_key(cmp)
 
     do_sample = N > cmp_algorithm.max_N
     TOTAL = 1 if do_sample else cmp_algorithm.input_total(N)
@@ -40,32 +65,31 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         else:
             callback(0, TOTAL)
     operation_cnts = []
-    key = cmp_to_key(cmp)
     start_time = thread_time()
     leaf_cnt = 0
-    for I, actual in enumerate(cmp_algorithm.sampler(N) if do_sample else cmp_algorithm.generator(N)):
-        arrs = []
+    for I, val_array in enumerate(cmp_algorithm.sampler(N) if do_sample else cmp_algorithm.generator(N)):
+        idx_arrays = []
         cmp_xys = []
-        arr = [(key(x), x) for x in range(N)]
+        idx_array = cmp_algorithm.map_enumerate(key, val_array)
         operation_cnt = 0
-        cmp_algorithm.func(arr)
-        if not cmp_algorithm.validator(actual[x] for _, x in arr):
+        cmp_algorithm.func(idx_array)
+        if not cmp_algorithm.validator(cmp_algorithm.map(lambda x: x.obj.val, idx_array)):
             raise InvalidCmpAlgorithmError
         operation_cnts.append(operation_cnt)
-        arrs.append([x for _, x in arr])
+        idx_arrays.append(cmp_algorithm.map(lambda x: x.obj.idx, idx_array))
         cmp_xys.append(None)
         node = nodes[0]
         is_new_node = I == 0
-        for J, (arr, cmp_xy) in enumerate(zip(arrs, cmp_xys)):
-            if node.arr is None:
-                node.arr = arr
-            elif node.arr != arr:
-                raise NonDeterministicError
-            if len(node.actuals) < ACTUALS_MAX_LENGTH:
-                node.actuals.append(actual)
+        for J, (idx_array, cmp_xy) in enumerate(zip(idx_arrays, cmp_xys)):
+            if node.idx_array is None:
+                node.idx_array = idx_array
+            elif node.idx_array != idx_array:  # the new index array is not the same as the previous one at this node
+                raise NonDeterministicError  # TODO: not applicable to non list based cmp algorithms
+            if len(node.val_arrays) < ACTUALS_MAX_LENGTH:
+                node.val_arrays.append(val_array)
 
-            if J == len(arrs) - 1:
-                if node.cmp_xy is not None:
+            if J == len(idx_arrays) - 1:
+                if node.cmp_xy is not None:  # should have stopped at a leaf node
                     raise NonDeterministicError
                 if is_new_node:
                     leaf_cnt += 1
@@ -73,19 +97,19 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
 
             if node.cmp_xy is None:
                 node.cmp_xy = cmp_xy[:2]
-            elif node.cmp_xy != cmp_xy[:2]:
+            elif node.cmp_xy != cmp_xy[:2]:  # the new comparison is not the same as the previous one at this node
                 raise NonDeterministicError
 
             is_new_node = False
             if cmp_xy[2]:  # x < y
                 if node.left is None:
-                    node.left = DecisionTreeNode(len(nodes), node, len(arr) <= 26, True)
+                    node.left = DecisionTreeNode(len(nodes), node, len(idx_array) <= 26, True)
                     nodes.append(node.left)
                     is_new_node = True
                 node = node.left
             else:
                 if node.right is None:
-                    node.right = DecisionTreeNode(len(nodes), node, len(arr) <= 26, False)
+                    node.right = DecisionTreeNode(len(nodes), node, len(idx_array) <= 26, False)
                     nodes.append(node.right)
                     is_new_node = True
                 node = node.right
