@@ -36,6 +36,7 @@ class NodeHolder:
     def initialize(self, cmp_algorithm_i: int, N: int) -> None:
         with self.lock:
             self.cmp_algorithm = cmp_algorithms[cmp_algorithm_i]
+            self.idx_use_letter = self.cmp_algorithm.idx_use_letter(N)
             print(f"init: `{self.cmp_algorithm.name}` with {N} elements")
             self._initialize(self.cmp_algorithm, N)
             print(f"fin:  `{self.cmp_algorithm.name}` with {N} elements")
@@ -156,7 +157,7 @@ class Nodes:
         for node_id in self.visiblity_state:
             node: DecisionTreeNode = self.node_holder.nodes[node_id]
             classes = "is_leaf" if self.node_is_leaf(node) else "has_hidden_child" if self.node_has_hidden_child(node) else ""
-            label = self.node_holder.cmp_algorithm.get_label(node, LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
+            label = self.node_holder.cmp_algorithm.get_label(node, self.node_holder.idx_use_letter, LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
             node_data = {"data": {"id": node.id, "label": label, "pos": node.pos}, "classes": classes}
             ret.append(node_data)
             if node.edge_data is not None:

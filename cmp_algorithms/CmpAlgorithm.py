@@ -14,8 +14,8 @@ def _sampler(N: int) -> Generator[list[int], None, None]:
         yield arr
 
 
-def _get_label(node: DecisionTreeNode, crop_length: int) -> str:
-    ret = ["(" + ",".join(chr(ord("a") + x) if len(node.idx_array) <= 26 else str(x) for x in node.idx_array) + ")"]
+def _get_label(node: DecisionTreeNode[Sequence[int]], idx_use_letter: bool, crop_length: int) -> str:
+    ret = [f"({','.join(chr(ord('a') + x) if idx_use_letter else str(x) for x in node.idx_array)})"]
     tot_len = len(ret[0])
     for val_array in node.val_arrays:
         ret.append(f" ({','.join(str(x + 1) for x in val_array)})")
@@ -42,6 +42,7 @@ class CmpAlgorithm(NamedTuple):
     output_total: Callable[[int], int] = lambda _: 1
     sampler: Callable[[int], Generator[Sequence[int], None, None]] = _sampler
     validator: Callable[[Iterable[int]], bool] = lambda arr: all(i == v for i, v in enumerate(arr))
-    get_label: Callable[[DecisionTreeNode, int], str] = _get_label
+    idx_use_letter: Callable[[int], bool] = lambda n: n <= 26
+    get_label: Callable[[DecisionTreeNode, bool, int], str] = _get_label
     map: Callable[[Callable[[int], T], Sequence[int]], Sequence[T]] = lambda f, arr: [f(x) for x in arr]
     map_enumerate: Callable[[Callable[[IdxVal], T], Sequence[int]], Sequence[T]] = lambda f, arr: [f(IdxVal(i, x)) for i, x in enumerate(arr)]

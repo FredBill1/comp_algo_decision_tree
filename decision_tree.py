@@ -59,6 +59,7 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
 
     do_sample = N > cmp_algorithm.max_N
     TOTAL = 1 if do_sample else cmp_algorithm.input_total(N)
+    EDGE_USE_LETTER = cmp_algorithm.idx_use_letter(N)
     if callback is not None:
         if do_sample:
             callback(0, MAX_SAMPLE_TIME_MS)
@@ -83,8 +84,8 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         for J, (idx_array, cmp_xy) in enumerate(zip(idx_arrays, cmp_xys)):
             if node.idx_array is None:
                 node.idx_array = idx_array
-            elif node.idx_array != idx_array:  # the new index array is not the same as the previous one at this node
-                raise NonDeterministicError  # TODO: not applicable to non list based cmp algorithms
+            # elif node.idx_array != idx_array:  # the new index array is not the same as the previous one at this node
+            #     raise NonDeterministicError  # TODO: not applicable to non list based cmp algorithms
             if len(node.val_arrays) < ACTUALS_MAX_LENGTH:
                 node.val_arrays.append(val_array)
 
@@ -103,13 +104,13 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
             is_new_node = False
             if cmp_xy[2]:  # x < y
                 if node.left is None:
-                    node.left = DecisionTreeNode(len(nodes), node, len(idx_array) <= 26, True)
+                    node.left = DecisionTreeNode(len(nodes), node, EDGE_USE_LETTER, True)
                     nodes.append(node.left)
                     is_new_node = True
                 node = node.left
             else:
                 if node.right is None:
-                    node.right = DecisionTreeNode(len(nodes), node, len(idx_array) <= 26, False)
+                    node.right = DecisionTreeNode(len(nodes), node, EDGE_USE_LETTER, False)
                     nodes.append(node.right)
                     is_new_node = True
                 node = node.right

@@ -7,8 +7,6 @@ from random import randint, sample
 
 from ..CmpAlgorithm import CmpAlgorithm
 
-max_N = 12
-
 
 def _sub_heap_sizes(N: int) -> tuple[int, int]:
     t = 1 << (N.bit_length() - 2)
@@ -125,7 +123,7 @@ def push_down(arr: list) -> None:
 algorithm = CmpAlgorithm(
     "push down",
     push_down,
-    max_N,
+    12,
     semi_heaps,
     semi_heaps_total,
     heaps_total,

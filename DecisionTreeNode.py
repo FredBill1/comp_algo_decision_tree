@@ -1,14 +1,14 @@
-from typing import Optional
+from typing import Generic, Optional, TypeVar
 
-from Config import *
+Container = TypeVar("Container")
 
 
-class DecisionTreeNode:
+class DecisionTreeNode(Generic[Container]):
     def __init__(self, node_id: int, parent: Optional["DecisionTreeNode"] = None, use_letter: bool = True, is_left: bool = False) -> None:
         self.id = node_id
-        self.idx_array: Optional[list[int]] = None
+        self.idx_array: Optional[Container] = None
         self.cmp_xy: Optional[tuple[int, int]] = None
-        self.val_arrays: list[tuple[int, ...]] = []
+        self.val_arrays: list[Container] = []
         self.left: Optional[DecisionTreeNode] = None
         self.right: Optional[DecisionTreeNode] = None
         self.pos = 0.0 if parent is None else parent.pos * 2 + (2 - int(is_left))
