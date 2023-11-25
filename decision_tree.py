@@ -44,6 +44,9 @@ def cmp_to_key(mycmp):
 def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int], int]:
     nodes = [DecisionTreeNode()]
 
+    def convert_idx_array(idx_array: list[int]) -> list[int]:
+        return cmp_algorithm.idx_converter(cmp_algorithm.map(lambda x: x.obj.idx, idx_array))
+
     def cmp(x: IdxVal, y: IdxVal) -> int:
         if x.idx > y.idx:
             return -cmp(y, x)
@@ -51,7 +54,7 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         if not (idx_arrays and cur_cmp_xy == cmp_xys[-1]):
             nonlocal operation_cnt
             operation_cnt += 1
-            idx_arrays.append(cmp_algorithm.map(lambda x: x.obj.idx, idx_array))
+            idx_arrays.append(convert_idx_array(idx_array))
             cmp_xys.append(cur_cmp_xy)
         return 1 if x.val > y.val else -1 if x.val < y.val else 0
 
@@ -76,15 +79,15 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         if not cmp_algorithm.validator(cmp_algorithm.map(lambda x: x.obj.val, idx_array)):
             raise InvalidCmpAlgorithmError
         operation_cnts.append(operation_cnt)
-        idx_arrays.append(cmp_algorithm.map(lambda x: x.obj.idx, idx_array))
+        idx_arrays.append(convert_idx_array(idx_array))
         cmp_xys.append(None)
         node = nodes[0]
         is_new_node = I == 0
         for J, (idx_array, cmp_xy) in enumerate(zip(idx_arrays, cmp_xys)):
             if node.idx_array is None:
                 node.idx_array = idx_array
-            # elif node.idx_array != idx_array:  # TODO: not applicable to non list based cmp algorithms
-            #     raise NonDeterministicError("the new index array is not the same as the previous one at this node")
+            elif node.idx_array != idx_array:
+                raise NonDeterministicError("the new index array is not the same as the previous one at this node")
             if len(node.val_arrays) < ACTUALS_MAX_LENGTH:
                 node.val_arrays.append(val_array)
 

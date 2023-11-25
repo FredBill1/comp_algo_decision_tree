@@ -152,12 +152,35 @@ def _visit(node: Node) -> Generator[Node, None, None]:
         yield from _visit(node.right)
 
 
+def _find(node: Node, val, idx: int = 1) -> Optional[int]:
+    if node.is_empty:
+        return None
+    if node.val == val:
+        return idx
+    if (left := _find(node.left, val, (idx << 1))) is not None:
+        return left
+    if (right := _find(node.right, val, (idx << 1) + 1)) is not None:
+        return right
+    return None
+
+
+def _to_path(idx: int) -> str:
+    ret = []
+    while idx > 1:
+        ret.append("R" if idx & 1 else "L")
+        idx >>= 1
+    return "".join(reversed(ret))
+
+
+def idx_converter(node: Node[int]) -> str:
+    return _to_path(_find(node, 0))
+
+
 def get_label(tree_node: DecisionTreeNode[Node[int]], idx_use_letter: bool, crop_length: int) -> str:
-    # TODO: fix idx_array
-    ret = [f"({','.join('_' if x.is_empty else chr(ord('a') + x.val) if idx_use_letter else f'[{str(x.val)}]' for x in _visit(tree_node.idx_array))})"]
+    ret = [f"({tree_node.idx_array})"]
     tot_len = len(ret[0])
     for val in tree_node.val_arrays:
-        ret.append(f"({','.join('_' if node.is_empty else str(node.val + 1) for node in _visit(val))})")
+        ret.append(f" ({','.join('_' if node.is_empty else str(node.val + 1) for node in _visit(val))})")
         tot_len += len(ret[-1])
         if crop_length is not None and tot_len >= crop_length:
             return "".join(ret)[: crop_length - 3] + "..."
@@ -173,6 +196,7 @@ algorithm = CmpAlgorithm(
     heaps_total,
     semi_heap_sampler,
     is_heap,
+    idx_converter,
     lambda N: N <= 3,
     get_label,
     partial(heap_map, map_empty=True),
