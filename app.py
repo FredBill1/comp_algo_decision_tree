@@ -239,7 +239,6 @@ cytoscape = cyto.Cytoscape(
         spacingFactor=1.75,
         animate=True,
         animationDuration=200,
-        sort="function(a, b) { return a.data('pos') - b.data('pos') }",
     ),
     style={"height": "98%", "width": "100%"},
     stylesheet=[

@@ -112,7 +112,6 @@ class Nodes:
                             Q.append(child)
             depth += 1
         update = np.array(update, dtype=np.int32)
-        update.sort()
         self.visiblity_state = snp.merge(self.visiblity_state, update, duplicates=snp.DROP)
 
     def hide_children(self, node: DecisionTreeNode) -> None:
@@ -149,7 +148,6 @@ class Nodes:
                     tot += 1
                     Q.append(child)
         self.visiblity_state = np.array(elem, dtype=np.int32)
-        self.visiblity_state.sort()
         return tot < MAX_ELEMENTS
 
     def visible_elements(self, show_full_labels: bool) -> list[dict]:
@@ -158,8 +156,8 @@ class Nodes:
             node: DecisionTreeNode = self.node_holder.nodes[node_id]
             classes = "is_leaf" if self.node_is_leaf(node) else "has_hidden_child" if self.node_has_hidden_child(node) else ""
             label = self.node_holder.cmp_algorithm.get_label(node, self.node_holder.idx_use_letter, LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
-            node_data = {"data": {"id": node.id, "label": label, "pos": node.pos}, "classes": classes}
+            node_data = {"data": {"id": node.id, "label": label}, "classes": classes}
             ret.append(node_data)
-            if node.edge_data is not None:
-                ret.append(node.edge_data)
+            if node.parent is not None:
+                ret.append(node.edge_data(self.node_holder.idx_use_letter))
         return ret

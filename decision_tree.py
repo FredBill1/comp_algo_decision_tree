@@ -42,7 +42,7 @@ def cmp_to_key(mycmp):
 
 
 def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int], int]:
-    nodes = [DecisionTreeNode(0)]
+    nodes = [DecisionTreeNode()]
 
     def cmp(x: IdxVal, y: IdxVal) -> int:
         if x.idx > y.idx:
@@ -59,7 +59,6 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
 
     do_sample = N > cmp_algorithm.max_N
     TOTAL = 1 if do_sample else cmp_algorithm.input_total(N)
-    EDGE_USE_LETTER = cmp_algorithm.idx_use_letter(N)
     if callback is not None:
         if do_sample:
             callback(0, MAX_SAMPLE_TIME_MS)
@@ -104,13 +103,13 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
             is_new_node = False
             if cmp_xy[2]:  # x < y
                 if node.left is None:
-                    node.left = DecisionTreeNode(len(nodes), node, EDGE_USE_LETTER, True)
+                    node.left = DecisionTreeNode(node, True)
                     nodes.append(node.left)
                     is_new_node = True
                 node = node.left
             else:
                 if node.right is None:
-                    node.right = DecisionTreeNode(len(nodes), node, EDGE_USE_LETTER, False)
+                    node.right = DecisionTreeNode(node, False)
                     nodes.append(node.right)
                     is_new_node = True
                 node = node.right
@@ -122,6 +121,9 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
                 callback(cur_time, MAX_SAMPLE_TIME_MS)
             else:
                 callback(I + 1, TOTAL)
+    nodes.sort(key=lambda x: x.id)
+    for i, node in enumerate(nodes):
+        node.id = i
     return nodes, operation_cnts, leaf_cnt
 
 
