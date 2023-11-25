@@ -48,6 +48,8 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         return cmp_algorithm.idx_converter(cmp_algorithm.map(lambda x: x.obj.idx, idx_array))
 
     def cmp(x: IdxVal, y: IdxVal) -> int:
+        if x.idx == y.idx:
+            return 0
         if x.idx > y.idx:
             return -cmp(y, x)
         cur_cmp_xy = (x.idx, y.idx, x.val < y.val)
