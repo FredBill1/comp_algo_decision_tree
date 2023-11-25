@@ -240,7 +240,7 @@ cytoscape = cyto.Cytoscape(
         animate=True,
         animationDuration=200,
     ),
-    style={"height": "98%", "width": "100%"},
+    style={"width": "100%", "height": "100%", "min-height": "0", "flex": "1"},
     stylesheet=[
         {"selector": "edge", "style": {"label": "data(cmp_op)", "curve-style": "bezier", "target-arrow-shape": "triangle"}},
         {"selector": "node", "style": {"label": "data(label)"}},
@@ -289,8 +289,18 @@ app = Dash(
 app.layout = dmc.NotificationsProvider(
     html.Div(
         [html.Div(id="notifications_container"), control_panel, cytoscape, code_modal, statistics_modal, visiblity_state, buffered_input, last_tree_param],
-        style={"height": "90vh", "width": "98vw", "margin": "auto"},
-    )
+        style={
+            "position": "absolute",
+            "top": "0",
+            "left": "0",
+            "right": "0",
+            "bottom": "0",
+            "display": "flex",
+            "flex-direction": "column",
+            "align-items": "stretch",
+            "overflow": "hidden",
+        },
+    ),
 )
 server = app.server
 executor = Executor(server)
