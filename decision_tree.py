@@ -8,8 +8,8 @@ from DecisionTreeNode import DecisionTreeNode
 
 
 class NonDeterministicError(Exception):
-    def __init__(self) -> None:
-        super().__init__("Non-deterministic cmp algorithm")
+    def __init__(self, msg: str) -> None:
+        super().__init__("Non-deterministic cmp algorithm: " + msg)
 
 
 class InvalidCmpAlgorithmError(Exception):
@@ -84,22 +84,22 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         for J, (idx_array, cmp_xy) in enumerate(zip(idx_arrays, cmp_xys)):
             if node.idx_array is None:
                 node.idx_array = idx_array
-            # elif node.idx_array != idx_array:  # the new index array is not the same as the previous one at this node
-            #     raise NonDeterministicError  # TODO: not applicable to non list based cmp algorithms
+            # elif node.idx_array != idx_array:  # TODO: not applicable to non list based cmp algorithms
+            #     raise NonDeterministicError("the new index array is not the same as the previous one at this node")
             if len(node.val_arrays) < ACTUALS_MAX_LENGTH:
                 node.val_arrays.append(val_array)
 
             if J == len(idx_arrays) - 1:
-                if node.cmp_xy is not None:  # should have stopped at a leaf node
-                    raise NonDeterministicError
+                if node.cmp_xy is not None:
+                    raise NonDeterministicError("should have stopped at a leaf node")
                 if is_new_node:
                     leaf_cnt += 1
                 break
 
             if node.cmp_xy is None:
                 node.cmp_xy = cmp_xy[:2]
-            elif node.cmp_xy != cmp_xy[:2]:  # the new comparison is not the same as the previous one at this node
-                raise NonDeterministicError
+            elif node.cmp_xy != cmp_xy[:2]:
+                raise NonDeterministicError(f"the new comparison({node.cmp_xy}) is not the same as the previous one({cmp_xy[:2]}) at this node")
 
             is_new_node = False
             if cmp_xy[2]:  # x < y
