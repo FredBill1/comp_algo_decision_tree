@@ -16,7 +16,8 @@ def _sampler(N: int) -> Generator[list[int], None, None]:
 
 def _get_label(node: DecisionTreeNode[Sequence[int]], idx_use_letter: bool, crop_length: int) -> str:
     ret = [f"({','.join(chr(ord('a') + x) if idx_use_letter else str(x) for x in node.idx_array)})"]
-    tot_len = len(ret[0])
+    if (tot_len := len(ret[0])) >= crop_length:
+        return ret[0][: crop_length - 3] + "..."
     for val_array in node.val_arrays:
         ret.append(f" ({','.join(str(x + 1) for x in val_array)})")
         tot_len += len(ret[-1])

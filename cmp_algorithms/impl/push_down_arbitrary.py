@@ -177,7 +177,8 @@ def idx_converter(node: Node[int]) -> str:
 
 def get_label(tree_node: DecisionTreeNode[Node[int]], idx_use_letter: bool, crop_length: int) -> str:
     ret = [f"({tree_node.idx_array})"]
-    tot_len = len(ret[0])
+    if (tot_len := len(ret[0])) >= crop_length:
+        return ret[0][: crop_length - 3] + "..."
     for val in tree_node.val_arrays:
         ret.append(f" ({','.join('_' if node.is_empty else str(node.val + 1) for node in _visit(val))})")
         tot_len += len(ret[-1])
