@@ -173,7 +173,7 @@ def on_show_code(_show_code: int, cmp_algorithm_i: str):
     code = inspect.getsource(cmp_algorithm.func).strip()
     children = [
         dbc.ModalHeader(dbc.ModalTitle(cmp_algorithm.name)),
-        dbc.ModalBody(dcc.Markdown(f"```python\n{code}\n```"), style={"margin": "auto"}),
+        dbc.ModalBody(dcc.Markdown(f"```python\n{code}\n```"), style={"margin": "auto", "max-width": "100%"}),
     ]
     return [True, children, ""]
 
