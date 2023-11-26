@@ -138,7 +138,6 @@ def semi_heaps_total(N: int) -> int:
 
 
 def push_down_arbitrary(node: Node) -> None:
-    # empty child have infinite value, therefore it will never be swapped
     nxt = node.left if node.left.val < node.right.val else node.right
     if nxt.val < node.val:
         node.val, nxt.val = nxt.val, node.val
