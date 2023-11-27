@@ -42,7 +42,7 @@ class CmpAlgorithm(NamedTuple):
     input_total: Callable[[int], int] = factorial
     output_total: Callable[[int], int] = lambda _: 1
     sampler: Callable[[int], Generator[Sequence[int], None, None]] = _sampler
-    validator: Callable[[Iterable[int]], bool] = lambda arr: all(i == v for i, v in enumerate(arr))
+    validator: Callable[[Sequence[int]], bool] = lambda arr: all(i == v for i, v in enumerate(arr))
     idx_converter: Callable[[Sequence[int]], Any] = lambda arr: arr
     idx_use_letter: Callable[[int], bool] = lambda n: n <= 26
     get_label: Callable[[DecisionTreeNode, bool, int], str] = _get_label

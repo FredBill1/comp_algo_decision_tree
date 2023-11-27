@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Sequence
 from math import factorial
 
 from ..CmpAlgorithm import CmpAlgorithm
@@ -10,8 +10,7 @@ def find_max(arr: list) -> None:
             arr[0], arr[i] = arr[i], arr[0]
 
 
-def _validator(arr: Iterable[int]) -> bool:
-    arr = list(arr)
+def _validator(arr: Sequence[int]) -> bool:
     if arr[0] != len(arr) - 1:
         return False
     return all(i == v for i, v in enumerate(sorted(arr)))
