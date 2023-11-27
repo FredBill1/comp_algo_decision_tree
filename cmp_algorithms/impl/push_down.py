@@ -128,7 +128,7 @@ algorithm = CmpAlgorithm(
     semi_heaps_total,
     heaps_total,
     semi_heap_sampler,
-    is_heap,
+    lambda arr, _: is_heap(arr),
 )
 
 

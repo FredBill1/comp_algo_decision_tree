@@ -185,7 +185,7 @@ algorithm = CmpAlgorithm(
     semi_heaps_total,
     heaps_total,
     semi_heap_sampler,
-    is_heap,
+    lambda node, _: is_heap(node),
     idx_converter,
     lambda N: N <= 3,
     get_label,

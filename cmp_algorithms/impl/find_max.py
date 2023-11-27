@@ -10,7 +10,7 @@ def find_max(arr: list) -> None:
             arr[0], arr[i] = arr[i], arr[0]
 
 
-def _validator(arr: Sequence[int]) -> bool:
+def _validator(arr: Sequence[int], _) -> bool:
     if arr[0] != len(arr) - 1:
         return False
     return all(i == v for i, v in enumerate(sorted(arr)))

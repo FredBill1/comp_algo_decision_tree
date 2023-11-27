@@ -2,7 +2,7 @@ from collections.abc import Callable, Generator, Iterable, MutableSequence, Sequ
 from itertools import permutations
 from math import factorial
 from random import shuffle
-from typing import NamedTuple, TypeVar, Any
+from typing import Any, NamedTuple, Optional, TypeVar
 
 from DecisionTreeNode import DecisionTreeNode
 
@@ -36,13 +36,13 @@ T = TypeVar("T")
 
 class CmpAlgorithm(NamedTuple):
     name: str
-    func: Callable[[MutableSequence[int]], None]
+    func: Callable[[MutableSequence[int]], Optional[Any]]
     max_N: int
     generator: Callable[[int], Iterable[Sequence[int]]] = lambda n: permutations(range(n))
     input_total: Callable[[int], int] = factorial
     output_total: Callable[[int], int] = lambda _: 1
     sampler: Callable[[int], Generator[Sequence[int], None, None]] = _sampler
-    validator: Callable[[Sequence[int]], bool] = lambda arr: all(i == v for i, v in enumerate(arr))
+    validator: Callable[[Sequence[int], Optional[Any]], bool] = lambda arr, _: all(i == v for i, v in enumerate(arr))
     idx_converter: Callable[[Sequence[int]], Any] = lambda arr: arr
     idx_use_letter: Callable[[int], bool] = lambda n: n <= 26
     get_label: Callable[[DecisionTreeNode, bool, int], str] = _get_label

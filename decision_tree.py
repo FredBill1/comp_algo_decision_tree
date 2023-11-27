@@ -77,8 +77,8 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         cmp_xys = []
         idx_array = cmp_algorithm.map_enumerate(key, val_array)
         operation_cnt = 0
-        cmp_algorithm.func(idx_array)
-        if not cmp_algorithm.validator(cmp_algorithm.map(lambda x: x.obj.val, idx_array)):
+        ret = cmp_algorithm.func(idx_array)
+        if not cmp_algorithm.validator(cmp_algorithm.map(lambda x: x.obj.val, idx_array), ret):
             raise InvalidCmpAlgorithmError
         operation_cnts.append(operation_cnt)
         idx_arrays.append(convert_idx_array(idx_array))
