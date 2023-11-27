@@ -144,43 +144,33 @@ def push_down_arbitrary(node: Node) -> None:
         push_down_arbitrary(nxt)
 
 
-def _visit(node: Node) -> Generator[Node, None, None]:
-    yield node
-    if not node.is_empty:
-        yield from _visit(node.left)
-        yield from _visit(node.right)
-
-
-def _find(node: Node, val, idx: int = 1) -> Optional[int]:
-    if node.is_empty:
-        return None
-    if node.val == val:
-        return idx
-    if (left := _find(node.left, val, (idx << 1))) is not None:
-        return left
-    if (right := _find(node.right, val, (idx << 1) + 1)) is not None:
-        return right
-    return None
-
-
-def _to_path(idx: int) -> str:
-    ret = []
-    while idx > 1:
-        ret.append("R" if idx & 1 else "L")
-        idx >>= 1
-    return "".join(reversed(ret))
-
-
 def idx_converter(node: Node[int]) -> str:
-    return _to_path(_find(node, 0))
+    def dfs(node: Node[int]) -> list[str]:
+        if node.is_empty:
+            return None
+        if node.val == 0:
+            return []
+        if (ret := dfs(node.left)) is not None:
+            ret.append("L")
+        elif (ret := dfs(node.right)) is not None:
+            ret.append("R")
+        return ret
+
+    return "".join(reversed(dfs(node)))
 
 
 def get_label(tree_node: DecisionTreeNode[Node[int]], idx_use_letter: bool, crop_length: int) -> str:
+    def visit(node: Node) -> Generator[Node, None, None]:
+        yield node
+        if not node.is_empty:
+            yield from visit(node.left)
+            yield from visit(node.right)
+
     ret = [f"({tree_node.idx_array})"]
     if (tot_len := len(ret[0])) >= crop_length:
         return ret[0][: crop_length - 3] + "..."
     for val in tree_node.val_arrays:
-        ret.append(f" ({','.join('_' if node.is_empty else str(node.val + 1) for node in _visit(val))})")
+        ret.append(f" ({','.join('_' if node.is_empty else str(node.val + 1) for node in visit(val))})")
         tot_len += len(ret[-1])
         if crop_length is not None and tot_len >= crop_length:
             return "".join(ret)[: crop_length - 3] + "..."
