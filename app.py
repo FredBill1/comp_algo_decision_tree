@@ -111,13 +111,12 @@ def on_data(
         ret.progress_interval__disabled = False
         ret.control_loading__style = {"visibility": "hidden"}
         return ret.to_list()
-    else:
-        ret.progress__label = Decimal(node_holder.leaf_cnt).to_eng_string()
     ret.show_statistics__disabled = False
     ret.expand_all__disabled = False
     ret.reset__disabled = False
 
     node_holder.wait_until_initialized()
+    ret.progress__label = Decimal(node_holder.leaf_cnt).to_eng_string()
     nodes = Nodes(node_holder, visiblity_state)
     if trigger_id == "show_statistics" or buffered_input == "show_statistics":
         data = np.array(node_holder.operation_cnts, dtype=np.int32)
