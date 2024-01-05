@@ -29,6 +29,7 @@ class OnDataCallbackOutput:
     show_statistics__disabled: bool = True
     expand_all__disabled: bool = True
     reset__disabled: bool = True
+    export_svg__disabled: bool = True
     visiblity_state__data: Optional[str] = None
     cytoscape__elements: list[dict] = field(default_factory=list)
     notifications_container__children: list | dmc.Notification = field(default_factory=list)
@@ -114,6 +115,7 @@ def on_data(
     ret.show_statistics__disabled = False
     ret.expand_all__disabled = False
     ret.reset__disabled = False
+    ret.export_svg__disabled = False
 
     node_holder.wait_until_initialized()
     ret.progress__label = Decimal(node_holder.leaf_cnt).to_eng_string()
@@ -177,13 +179,22 @@ def on_show_code(_show_code: int, cmp_algorithm_i: str):
     return [True, children, ""]
 
 
+@callback(
+    Output("cytoscape", "generateImage"),
+    Input("export_svg", "n_clicks"),
+    prevent_initial_call=True,
+)
+def on_export_svg(_export_svg: int):
+    return {"type": "svg", "action": "download"}
+
+
 control_panel = html.Div(
     [
         dbc.Button("Expand All", id="expand_all", disabled=True),
         dbc.Button("Reset", id="reset", disabled=True),
         dbc.Row(
             [
-                "Cmp Algorithm:",
+                "Algorithm:",
                 dbc.Select(
                     options=[{"label": cmp_algorithm.name, "value": i} for i, cmp_algorithm in enumerate(cmp_algorithms)],
                     id="cmp_algorithm",
@@ -225,6 +236,7 @@ control_panel = html.Div(
             persistence=True,
             persistence_type=USER_STATE_STORAGE_TYPE,
         ),
+        dbc.Button("Export SVG", id="export_svg", disabled=True),
         dcc.Loading(id="control_loading", type="default", children=html.Div(id="control_loading_output"), style={"visibility": "hidden"}),
     ],
     style={"column-gap": "1rem", "display": "flex", "align-items": "center", "margin": "1rem", "flex-wrap": "wrap"},
