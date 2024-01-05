@@ -13,10 +13,13 @@ class DecisionTreeNode(Generic[Container]):
         self.left: Optional[DecisionTreeNode] = None
         self.right: Optional[DecisionTreeNode] = None
         self.parent = None if parent is None else proxy(parent)
-        self.is_left = is_left
+
+    @property
+    def is_left(self) -> bool:
+        return self.parent.left is self
 
     def edge_data(self, use_letter: bool) -> None:
         x, y = [chr(ord("a") + x) if use_letter else f"[{x}]" for x in self.parent.cmp_xy[:2]]
         return {"data": dict(source=self.parent.id, target=self.id, cmp_op=f"{x}<{y}" if self.is_left else f"{x}>{y}")}
 
-    __slots__ = ["id", "idx_array", "cmp_xy", "val_arrays", "left", "right", "parent", "is_left", "__weakref__"]
+    __slots__ = ["id", "idx_array", "cmp_xy", "val_arrays", "left", "right", "parent", "__weakref__"]
