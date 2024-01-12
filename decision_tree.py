@@ -44,7 +44,7 @@ def cmp_to_key(mycmp):
 def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int], int]:
     nodes = [DecisionTreeNode()]
 
-    def convert_idx_array(idx_array: list[int]) -> list[int]:
+    def convert_idx_array(idx_array):
         return cmp_algorithm.idx_converter(cmp_algorithm.map(lambda x: x.obj.idx, idx_array))
 
     def cmp(x: IdxVal, y: IdxVal) -> int:
@@ -58,7 +58,7 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
             operation_cnt += 1
             idx_arrays.append(convert_idx_array(idx_array))
             cmp_xys.append(cur_cmp_xy)
-        return 1 if x.val > y.val else -1 if x.val < y.val else 0
+        return x.val - y.val
 
     key = cmp_to_key(cmp)
 
