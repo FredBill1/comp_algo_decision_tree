@@ -43,7 +43,7 @@ class NodeHolder:
             self.initialized_flag.store(b"\x01", atomics.MemoryOrder.RELEASE)
 
     def wait_until_initialized(self) -> None:
-        if self.initialized_flag.load(atomics.MemoryOrder.RELAXED):
+        if self.initialized_flag.load(atomics.MemoryOrder.ACQUIRE) == b"\x01":
             return
         with self.lock:
             pass
