@@ -83,6 +83,8 @@ def sort_result() -> None:
     df = pd.read_csv(RESULT_DIR)
     df = df.sort_values(["name", "N"])
     df.to_csv(RESULT_DIR, index=False)
+    for name, group in df.groupby("name"):
+        group.drop(columns=["name"]).to_csv(RESULT_DIR.parent / f"{name}.csv", index=False)
 
 
 if __name__ == "__main__":
