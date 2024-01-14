@@ -73,7 +73,7 @@ def generate_statistics() -> None:
     tasks = list(product(range(len(cmp_algorithms)), Ns))
     RESULT_DIR.parent.mkdir(parents=True, exist_ok=True)
     with Pool() as pool, open(RESULT_DIR, "w") as f:
-        f.write("name,N,input total,output total,lower bound,best,worst,avg,ratio\n")
+        f.write("name,N,input,output,lower bound,best,worst,avg,ratio\n")
         for result in tqdm(pool.imap_unordered(_work, tasks), total=len(tasks)):
             f.write(result + "\n")
             f.flush()
