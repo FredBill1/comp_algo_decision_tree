@@ -117,8 +117,11 @@ def on_data(
     ret.reset__disabled = False
     ret.export_svg__disabled = False
 
+    def to_displayable_int(x: int) -> str:
+        return str(x) if x < 1e9 else f"{Decimal(x):.2e}"
+
     node_holder.wait_until_initialized()
-    ret.progress__label = Decimal(node_holder.leaf_cnt).to_eng_string()
+    ret.progress__label = to_displayable_int(node_holder.leaf_cnt)
     nodes = Nodes(node_holder, visiblity_state)
     if trigger_id == "show_statistics" or buffered_input == "show_statistics":
         data = np.array(node_holder.operation_cnts, dtype=np.int32)
@@ -130,8 +133,8 @@ def on_data(
         lower_bound = log2(input_total) - log2(output_total)
         ret.statistics_table__data = [
             {
-                "||Input||": input_total,
-                "||Output||": output_total,
+                "||Input||": to_displayable_int(input_total),
+                "||Output||": to_displayable_int(output_total),
                 "Lower Bound": f"Ω({lower_bound:.2f})",
                 "Leaf Count": node_holder.leaf_cnt,
                 "Best": data.min(),
