@@ -127,7 +127,7 @@ def on_data(
         ret.statistics_modal__is_open = True
         input_total = cmp_algorithm.input_total(int(input_N))
         output_total = cmp_algorithm.output_total(int(input_N))
-        lower_bound = log2(input_total / output_total)
+        lower_bound = log2(input_total) - log2(output_total)
         ret.statistics_table__data = [
             {
                 "||Input||": input_total,
