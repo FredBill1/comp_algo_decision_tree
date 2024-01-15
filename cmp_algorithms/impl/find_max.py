@@ -4,10 +4,11 @@ from math import factorial
 from ..CmpAlgorithm import CmpAlgorithm
 
 
-def find_max(arr: list) -> None:
+def find_max(arr: list):
     for i in range(1, len(arr)):
         if arr[i] > arr[0]:
             arr[0], arr[i] = arr[i], arr[0]
+    return arr[0]
 
 
 def _validator(arr: Sequence[int], _) -> bool:
