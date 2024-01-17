@@ -18,7 +18,7 @@ def lomuto_partition(L: list) -> int:
 class A356291:
     "https://oeis.org/A356291"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.F = 1
         self.R = [0]
         self.C = [1]
