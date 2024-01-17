@@ -19,7 +19,7 @@ def hoare_partition(L: list) -> int:
 
 
 def validator(L: list, ret: int) -> bool:
-    return max(L[: ret + 1]) < min(L[ret + 1 :])
+    return ret == len(L) - 1 or max(L[: ret + 1]) < min(L[ret + 1 :])
 
 
 algorithm = CmpAlgorithm(
