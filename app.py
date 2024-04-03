@@ -212,11 +212,12 @@ control_panel = html.Div(
         dbc.Button("Show Code", id="show_code"),
         dbc.Row(
             [
-                f"N(>0):",
+                f"N(1~{INPUT_N_MAX}):",
                 dbc.Input(
                     id="input_N",
                     type="number",
                     min=1,
+                    max=INPUT_N_MAX,
                     step=1,
                     style={"width": "5rem"},
                     debounce=True,
