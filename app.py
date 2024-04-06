@@ -251,7 +251,7 @@ cytoscape = cyto.Cytoscape(
     layout=dict(
         name="dagre",
         rankDir="UD",
-        spacingFactor=1.75,
+        spacingFactor=1.3,
         animate=True,
         animationDuration=200,
     ),
