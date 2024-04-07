@@ -156,7 +156,7 @@ class Nodes:
             node: DecisionTreeNode = self.node_holder.nodes[node_id]
             classes = "is_leaf" if self.node_is_leaf(node) else "has_hidden_child" if self.node_has_hidden_child(node) else ""
             label = self.node_holder.cmp_algorithm.get_label(node, self.node_holder.idx_use_letter, LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
-            node_data = {"data": {"id": node.id, "label": label}, "classes": classes}
+            node_data = {"data": {"id": str(node.id), "label": label}, "classes": classes}
             ret.append(node_data)
             if node.parent is not None:
                 ret.append(node.edge_data(self.node_holder.idx_use_letter))

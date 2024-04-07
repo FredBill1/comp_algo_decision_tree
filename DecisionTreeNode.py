@@ -20,6 +20,6 @@ class DecisionTreeNode(Generic[Container]):
 
     def edge_data(self, use_letter: bool) -> None:
         x, y = [chr(ord("a") + x) if use_letter else f"[{x}]" for x in self.parent.cmp_xy[:2]]
-        return {"data": dict(source=self.parent.id, target=self.id, cmp_op=f"{x}<{y}" if self.is_left else f"{x}>{y}")}
+        return {"data": dict(source=str(self.parent.id), target=str(self.id), cmp_op=f"{x}<{y}" if self.is_left else f"{x}>{y}")}
 
     __slots__ = ["id", "idx_array", "cmp_xy", "val_arrays", "left", "right", "parent", "__weakref__"]
