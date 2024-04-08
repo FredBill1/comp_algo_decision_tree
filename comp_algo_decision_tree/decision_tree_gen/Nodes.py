@@ -9,9 +9,9 @@ import atomics
 import numpy as np
 import sortednp as snp
 
-from .cmp_algorithms.cmp_algorithms import cmp_algorithms
-from .cmp_algorithms.CmpAlgorithm import CmpAlgorithm
-from .Config import *
+from ..cmp_algorithms.cmp_algorithms import cmp_algorithms
+from ..cmp_algorithms.CmpAlgorithm import CmpAlgorithm
+from ..Config import *
 from .decision_tree import DecisionTreeNode, decision_tree
 
 

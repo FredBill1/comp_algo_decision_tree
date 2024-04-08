@@ -6,7 +6,7 @@ from math import comb, factorial
 from random import randint, sample
 from typing import Generic, Optional, TypeVar
 
-from comp_algo_decision_tree.DecisionTreeNode import DecisionTreeNode
+from comp_algo_decision_tree.decision_tree_gen.DecisionTreeNode import DecisionTreeNode
 
 from ..CmpAlgorithm import CmpAlgorithm, IdxVal
 

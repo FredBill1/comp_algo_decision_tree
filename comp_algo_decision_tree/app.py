@@ -16,7 +16,7 @@ from flask_executor import Executor
 
 from .cmp_algorithms.cmp_algorithms import cmp_algorithms
 from .Config import *
-from .Nodes import Nodes
+from .decision_tree_gen.Nodes import Nodes
 
 
 @dataclass
