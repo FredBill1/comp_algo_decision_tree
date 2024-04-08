@@ -88,9 +88,10 @@ def on_data(
             title="Warning",
             action="show",
             message=f"Input `N={input_N}` is too large (upper limit for `{cmp_algorithm.name}` is {cmp_algorithm.max_N}), "
-            f"using the results from random sampling for {MAX_SAMPLE_TIME_MS / 1000:.1f}s instead.",
+            f"using the results from random sampling for {MAX_SAMPLE_TIME_MS / 1000:.1f}s instead. Note that subsequent operations"
+            " will also become inconsistent due to cache expiration.",
             icon=DashIconify(icon="material-symbols:warning"),
-            autoClose=10000,
+            autoClose=20000,
         )
 
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]

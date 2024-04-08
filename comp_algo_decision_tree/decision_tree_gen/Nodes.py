@@ -109,9 +109,12 @@ class Nodes:
     def decode_visiblity(visiblity: str) -> np.ndarray:
         return np.frombuffer(zlib.decompress(base64.b85decode(visiblity)), dtype=np.int32)
 
+    def node_id_visiblity(self, node_id: int) -> bool:
+        i = self.visiblity_state.searchsorted(node_id)
+        return i < len(self.visiblity_state) and self.visiblity_state[i] == node_id
+
     def node_visiblity(self, node: DecisionTreeNode) -> bool:
-        i = self.visiblity_state.searchsorted(node.id)
-        return i < len(self.visiblity_state) and self.visiblity_state[i] == node.id
+        return self.node_id_visiblity(node.id)
 
     def node_has_hidden_child(self, node: DecisionTreeNode) -> bool:
         for child in (node.left, node.right):
@@ -152,11 +155,9 @@ class Nodes:
         self.visiblity_state = np.delete(self.visiblity_state, deletes)
 
     def on_tap_node(self, node_id: int) -> None:
-        if node_id >= len(self.node_holder.nodes):
+        if node_id >= len(self.node_holder.nodes) or not self.node_id_visiblity(node_id):
             return
         node = self.node_holder.nodes[node_id]
-        if not self.node_visiblity(node):
-            return
         if self.node_is_leaf(node):
             return
         if self.node_has_hidden_child(node):
