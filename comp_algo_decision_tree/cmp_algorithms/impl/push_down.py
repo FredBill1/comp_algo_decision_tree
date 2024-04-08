@@ -3,7 +3,7 @@ from collections.abc import Generator, Sequence
 from functools import cache
 from itertools import combinations
 from math import comb
-from random import randint, sample
+from random import Random
 
 from ..CmpAlgorithm import CmpAlgorithm
 
@@ -50,14 +50,14 @@ def heaps(N: int) -> list[list[int]]:
     return res
 
 
-def _heap_sample(N: int) -> list[int]:
+def _heap_sample(N: int, r: Random) -> list[int]:
     if N <= 1:
         return list(range(N))
     L, R = _sub_heap_sizes(N)
-    map_l = sample(range(1, N), L)
+    map_l = r.sample(range(1, N), L)
     map_l.sort()
     map_r = tuple(filter(lambda x: x not in map_l, range(N)))
-    heap_l, heap_r = [map_l[x] for x in _heap_sample(L)], [map_r[x] for x in _heap_sample(R)]
+    heap_l, heap_r = [map_l[x] for x in _heap_sample(L, r)], [map_r[x] for x in _heap_sample(R, r)]
     return _merge_heap(0, heap_l, heap_r)
 
 
@@ -86,21 +86,21 @@ def semi_heaps(N: int) -> Generator[list[int], None, None]:
                     yield _merge_heap(root, heap_l, heap_r)
 
 
-def _semi_heap_sample(N: int) -> list[int]:
+def _semi_heap_sample(N: int, r: Random) -> list[int]:
     if N <= 1:
         return list(range(N))
     L, R = _sub_heap_sizes(N)
-    root = randint(0, N - 1)
-    map_l = sample(tuple(filter(lambda x: x != root, range(N))), L)
+    root = r.randint(0, N - 1)
+    map_l = r.sample(tuple(filter(lambda x: x != root, range(N))), L)
     map_l.sort()
     map_r = tuple(filter(lambda x: x != root and x not in map_l, range(N)))
-    heap_l, heap_r = [map_l[x] for x in _heap_sample(L)], [map_r[x] for x in _heap_sample(R)]
+    heap_l, heap_r = [map_l[x] for x in _heap_sample(L, r)], [map_r[x] for x in _heap_sample(R, r)]
     return _merge_heap(root, heap_l, heap_r)
 
 
-def semi_heap_sampler(N: int) -> Generator[list[int], None, None]:
+def semi_heap_sampler(N: int, r: Random) -> Generator[list[int], None, None]:
     while True:
-        yield _semi_heap_sample(N)
+        yield _semi_heap_sample(N, r)
 
 
 def semi_heaps_total(N: int) -> int:

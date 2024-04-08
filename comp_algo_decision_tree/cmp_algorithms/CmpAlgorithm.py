@@ -1,16 +1,16 @@
 from collections.abc import Callable, Generator, Iterable, MutableSequence, Sequence
 from itertools import permutations
 from math import factorial
-from random import shuffle
+from random import Random
 from typing import Any, NamedTuple, Optional, TypeVar
 
 from ..decision_tree_gen.DecisionTreeNode import DecisionTreeNode
 
 
-def _sampler(N: int) -> Generator[list[int], None, None]:
+def _sampler(N: int, r: Random) -> Generator[list[int], None, None]:
     arr = list(range(N))
     while True:
-        shuffle(arr)
+        r.shuffle(arr)
         yield arr
 
 
@@ -41,7 +41,7 @@ class CmpAlgorithm(NamedTuple):
     generator: Callable[[int], Iterable[Sequence[int]]] = lambda n: permutations(range(n))
     input_total: Callable[[int], int] = factorial
     output_total: Callable[[int], int] = lambda _: 1
-    sampler: Callable[[int], Generator[Sequence[int], None, None]] = _sampler
+    sampler: Callable[[int, Random], Generator[Sequence[int], None, None]] = _sampler
     validator: Callable[[Sequence[int], Optional[Any]], bool] = lambda arr, _: all(i == v for i, v in enumerate(arr))
     idx_converter: Callable[[Sequence[int]], Any] = lambda arr: arr
     idx_use_letter: Callable[[int], bool] = lambda n: n <= 26

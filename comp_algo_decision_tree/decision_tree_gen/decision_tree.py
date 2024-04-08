@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from random import Random
 from time import thread_time
 from typing import Optional
 
@@ -72,7 +73,8 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
     operation_cnts = []
     start_time = thread_time()
     leaf_cnt = 0
-    for I, val_array in enumerate(cmp_algorithm.sampler(N) if do_sample else cmp_algorithm.generator(N)):
+    r = Random(SAMPLE_SEED)
+    for I, val_array in enumerate(cmp_algorithm.sampler(N, r) if do_sample else cmp_algorithm.generator(N)):
         idx_arrays = []
         cmp_xys = []
         idx_array = cmp_algorithm.map_enumerate(key, val_array)

@@ -4,6 +4,7 @@ from itertools import product
 from math import log2, nan
 from multiprocessing import Pool
 from pathlib import Path
+from random import Random
 from time import thread_time
 from typing import Optional
 
@@ -42,7 +43,8 @@ def get_avg_operation_cnt(cmp_algorithm: CmpAlgorithm, N: int) -> tuple[int, int
     avg_sum = 0
     if do_sample:
         start_time = thread_time()
-    for val_array in cmp_algorithm.sampler(N) if do_sample else cmp_algorithm.generator(N):
+    r = Random(SAMPLE_SEED)
+    for val_array in cmp_algorithm.sampler(N, r) if do_sample else cmp_algorithm.generator(N):
         idx_array = cmp_algorithm.map_enumerate(key, val_array)
         last_cmp: Optional[tuple[int, int]] = None
         operation_cnt = 0

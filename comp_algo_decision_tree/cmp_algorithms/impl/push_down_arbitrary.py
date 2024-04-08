@@ -3,7 +3,7 @@ from collections.abc import Callable, Generator
 from functools import cache, partial
 from itertools import combinations
 from math import comb, factorial
-from random import randint, sample
+from random import Random
 from typing import Generic, Optional, TypeVar
 
 from comp_algo_decision_tree.decision_tree_gen.DecisionTreeNode import DecisionTreeNode
@@ -69,17 +69,17 @@ def heaps(N: int) -> list[Node[int]]:
     return res
 
 
-def _heap_sample(N: int) -> Node[int]:
+def _heap_sample(N: int, r: Random) -> Node[int]:
     if N < 1:
         return EMPTY
     if N == 1:
         return Node(0, EMPTY, EMPTY)
-    L = randint(0, N - 1)
+    L = r.randint(0, N - 1)
     R = N - L - 1
-    map_l = sample(range(1, N), L)
+    map_l = r.sample(range(1, N), L)
     map_l.sort()
     map_r = tuple(filter(lambda x: x not in map_l, range(N)))
-    heap_l, heap_r = heap_map(lambda x: map_l[x], _heap_sample(L)), heap_map(lambda x: map_r[x], _heap_sample(R))
+    heap_l, heap_r = heap_map(lambda x: map_l[x], _heap_sample(L, r)), heap_map(lambda x: map_r[x], _heap_sample(R, r))
     return Node(0, heap_l, heap_r)
 
 
@@ -113,24 +113,24 @@ def semi_heaps(N: int) -> Generator[Node[int], None, None]:
                         yield Node(root, heap_l, heap_r)
 
 
-def _semi_heap_sample(N: int) -> Node[int]:
+def _semi_heap_sample(N: int, r: Random) -> Node[int]:
     if N < 1:
         return EMPTY
     if N == 1:
         return Node(0, EMPTY, EMPTY)
-    L = randint(0, N - 1)
+    L = r.randint(0, N - 1)
     R = N - L - 1
-    root = randint(0, N - 1)
-    map_l = sample(tuple(filter(lambda x: x != root, range(N))), L)
+    root = r.randint(0, N - 1)
+    map_l = r.sample(tuple(filter(lambda x: x != root, range(N))), L)
     map_l.sort()
     map_r = tuple(filter(lambda x: x != root and x not in map_l, range(N)))
-    heap_l, heap_r = heap_map(lambda x: map_l[x], _heap_sample(L)), heap_map(lambda x: map_r[x], _heap_sample(R))
+    heap_l, heap_r = heap_map(lambda x: map_l[x], _heap_sample(L, r)), heap_map(lambda x: map_r[x], _heap_sample(R, r))
     return Node(root, heap_l, heap_r)
 
 
-def semi_heap_sampler(N: int) -> Generator[Node[int], None, None]:
+def semi_heap_sampler(N: int, r: Random) -> Generator[Node[int], None, None]:
     while True:
-        yield _semi_heap_sample(N)
+        yield _semi_heap_sample(N, r)
 
 
 def semi_heaps_total(N: int) -> int:
