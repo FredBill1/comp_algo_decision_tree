@@ -1,9 +1,11 @@
 "This module operates with Min-Heap"
 from collections.abc import Generator, Sequence
-from functools import cache
+from functools import lru_cache
 from itertools import combinations
 from math import comb
 from random import Random
+
+from comp_algo_decision_tree.Config import *
 
 from ..CmpAlgorithm import CmpAlgorithm
 
@@ -26,7 +28,7 @@ def _merge_heap(root: int, heap_l: list[int], heap_r: list[int]) -> list[int]:
     return cur
 
 
-@cache
+@lru_cache(MAX_CACHED_HEAP_COUNT)
 def heaps_total(N: int) -> int:
     if N <= 1:
         return 1
@@ -34,7 +36,7 @@ def heaps_total(N: int) -> int:
     return comb(L + R, L) * heaps_total(L) * heaps_total(R)
 
 
-@cache
+@lru_cache(MAX_CACHED_HEAP_COUNT)
 def heaps(N: int) -> list[list[int]]:
     if N <= 1:
         return [list(range(N))]

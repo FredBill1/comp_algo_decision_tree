@@ -1,11 +1,12 @@
 "This module operates with Min-Heap"
 from collections.abc import Callable, Generator
-from functools import cache, partial
+from functools import lru_cache, partial
 from itertools import combinations
 from math import comb, factorial
 from random import Random
 from typing import Generic, Optional, TypeVar
 
+from comp_algo_decision_tree.Config import *
 from comp_algo_decision_tree.decision_tree_gen.DecisionTreeNode import DecisionTreeNode
 
 from ..CmpAlgorithm import CmpAlgorithm, IdxVal
@@ -42,7 +43,7 @@ def heap_map_enumerate(f: Callable[[IdxVal], T], node: Node[int], map_empty: boo
     return dfs(node, 0)
 
 
-# @cache
+# @lru_cache(MAX_CACHED_HEAP_COUNT)
 def heaps_total(N: int) -> int:
     # if N <= 1:
     #     return 1
@@ -50,7 +51,7 @@ def heaps_total(N: int) -> int:
     return factorial(N)
 
 
-@cache
+@lru_cache(MAX_CACHED_HEAP_COUNT)
 def heaps(N: int) -> list[Node[int]]:
     if N < 1:
         return [EMPTY]

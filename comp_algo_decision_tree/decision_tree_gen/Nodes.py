@@ -92,7 +92,7 @@ class Nodes:
             if key in cls.cached:
                 cls.cached.move_to_end(key)
                 return next(reversed(cls.cached.values()))
-            if MAX_CACHED is not None and len(cls.cached) >= MAX_CACHED:
+            if MAX_CACHED_DECISION_TREES is not None and len(cls.cached) >= MAX_CACHED_DECISION_TREES:
                 cls.cached.popitem(last=False)
             ret = NodeHolder()
             cls.cached[key] = ret
