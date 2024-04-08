@@ -14,9 +14,9 @@ from dash import Dash, Input, Output, State, callback, ctx, dash_table, dcc, htm
 from dash_iconify import DashIconify
 from flask_executor import Executor
 
-from cmp_algorithms.cmp_algorithms import cmp_algorithms
-from Config import *
-from Nodes import Nodes
+from .cmp_algorithms.cmp_algorithms import cmp_algorithms
+from .Config import *
+from .Nodes import Nodes
 
 
 @dataclass

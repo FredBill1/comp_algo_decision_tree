@@ -1,4 +1,6 @@
-# Decision Tree for Cmp Algorithms
+# comp_algo_decision_tree
+
+Decision Trees for Comparison-based Algorithms
 
 ## Setup Environment
 
@@ -17,5 +19,5 @@ pip install waitress
 ```
 
 ```bash
-waitress-serve --listen=127.0.0.1:8000 --threads 6 'app:server'
+waitress-serve --listen=127.0.0.1:8000 --threads 6 'comp_algo_decision_tree.app:server'
 ```

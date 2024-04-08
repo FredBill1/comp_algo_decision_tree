@@ -2,9 +2,9 @@ from collections.abc import Callable
 from time import thread_time
 from typing import Optional
 
-from cmp_algorithms.CmpAlgorithm import CmpAlgorithm, IdxVal
-from Config import *
-from DecisionTreeNode import DecisionTreeNode
+from .cmp_algorithms.CmpAlgorithm import CmpAlgorithm, IdxVal
+from .Config import *
+from .DecisionTreeNode import DecisionTreeNode
 
 
 class NonDeterministicError(Exception):

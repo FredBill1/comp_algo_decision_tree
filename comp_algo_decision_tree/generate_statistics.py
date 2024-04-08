@@ -10,9 +10,9 @@ from typing import Optional
 import pandas as pd
 from tqdm import tqdm
 
-from cmp_algorithms.cmp_algorithms import cmp_algorithms
-from cmp_algorithms.CmpAlgorithm import CmpAlgorithm, IdxVal
-from Config import *
+from .cmp_algorithms.cmp_algorithms import cmp_algorithms
+from .cmp_algorithms.CmpAlgorithm import CmpAlgorithm, IdxVal
+from .Config import *
 
 RESULT_DIR = Path("logs/statistics.csv")
 

@@ -4,7 +4,7 @@ from math import factorial
 from random import shuffle
 from typing import Any, NamedTuple, Optional, TypeVar
 
-from DecisionTreeNode import DecisionTreeNode
+from ..DecisionTreeNode import DecisionTreeNode
 
 
 def _sampler(N: int) -> Generator[list[int], None, None]:
