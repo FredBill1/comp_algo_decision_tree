@@ -264,6 +264,7 @@ cytoscape = cyto.Cytoscape(
     stylesheet=[
         {"selector": "edge", "style": {"label": "data(cmp_op)", "curve-style": "bezier", "target-arrow-shape": "triangle"}},
         {"selector": "node", "style": {"label": "data(label)"}},
+        {"selector": ".full_label", "style": {"label": "data(full_label)"}},
         {"selector": ".has_hidden_child", "style": {"background-color": "red", "line-color": "red"}},
         {"selector": ".is_leaf", "style": {"background-color": "green", "line-color": "green"}},
         {"selector": "label", "style": {"color": "#0095FF"}},
