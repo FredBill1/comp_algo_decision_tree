@@ -61,13 +61,28 @@ class Nodes:
     cached: OrderedDict[tuple[int, int], NodeHolder] = OrderedDict()
     cached_lock = Lock()
 
-    def __init__(self, node_holder: NodeHolder, visiblity_state: Optional[str]) -> None:
+    def __init__(self, node_holder: NodeHolder, visiblity_state: Optional[str], validate_visiblity_state: bool) -> None:
         self.node_holder = node_holder
         if visiblity_state is not None:
             self.visiblity_state = self.decode_visiblity(visiblity_state)
+            if validate_visiblity_state:
+                self.visiblity_state = self._validate_visiblity_state(self.visiblity_state)
+
         else:
             self.visiblity_state = np.array([0], dtype=np.int32)
             self.expand_children(self.node_holder.nodes[0])
+
+    def _validate_visiblity_state(self, tmp_visiblity_state: np.ndarray) -> np.ndarray:
+        valid = [0]
+        in_valid = {0}
+        for node_id in tmp_visiblity_state[1:]:
+            if node_id >= len(self.node_holder.nodes):
+                break
+            parent_id = self.node_holder.nodes[node_id].parent.id
+            if parent_id in in_valid:
+                valid.append(node_id)
+                in_valid.add(node_id)
+        return np.array(valid, dtype=np.int32)
 
     @classmethod
     def get_node_holder(cls, cmp_algorithm_i: int, N: int) -> NodeHolder:
@@ -137,7 +152,11 @@ class Nodes:
         self.visiblity_state = np.delete(self.visiblity_state, deletes)
 
     def on_tap_node(self, node_id: int) -> None:
+        if node_id >= len(self.node_holder.nodes):
+            return
         node = self.node_holder.nodes[node_id]
+        if not self.node_visiblity(node):
+            return
         if self.node_is_leaf(node):
             return
         if self.node_has_hidden_child(node):

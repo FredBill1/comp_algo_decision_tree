@@ -81,7 +81,8 @@ def on_data(
         return ret.to_list()
     ret.last_tree_param__data = [int(cmp_algorithm_i), int(input_N)]
     cmp_algorithm = cmp_algorithms[int(cmp_algorithm_i)]
-    if ret.last_tree_param__data != last_tree_param and cmp_algorithm.max_N < int(input_N):
+    do_sample = cmp_algorithm.max_N < int(input_N)
+    if ret.last_tree_param__data != last_tree_param and do_sample:
         ret.notifications_container__children = dmc.Notification(
             id="warning_notification",
             title="Warning",
@@ -125,7 +126,7 @@ def on_data(
 
     node_holder.wait_until_initialized()
     ret.progress__label = to_displayable_int(node_holder.leaf_cnt)
-    nodes = Nodes(node_holder, visiblity_state)
+    nodes = Nodes(node_holder, visiblity_state, do_sample)
     if buffered_input is None:
         buffered_input = [None]
     if trigger_id == "show_statistics" or buffered_input[0] == "show_statistics":
