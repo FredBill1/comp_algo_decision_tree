@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from random import Random
-from time import thread_time
+from time import time
 from typing import Optional
 
 from ..cmp_algorithms.CmpAlgorithm import CmpAlgorithm, IdxVal
@@ -71,7 +71,7 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         else:
             callback(0, TOTAL)
     operation_cnts = []
-    start_time = thread_time()
+    start_time = time()
     leaf_cnt = 0
     r = Random(SAMPLE_SEED)
     for I, val_array in enumerate(cmp_algorithm.sampler(N, r) if do_sample else cmp_algorithm.generator(N)):
@@ -120,7 +120,7 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
                     nodes.append(node.right)
                     is_new_node = True
                 node = node.right
-        if do_sample and (cur_time := int((thread_time() - start_time) * 1000)) >= MAX_SAMPLE_TIME_MS:
+        if do_sample and (cur_time := int((time() - start_time) * 1000)) >= MAX_SAMPLE_TIME_MS:
             callback(MAX_SAMPLE_TIME_MS, MAX_SAMPLE_TIME_MS)
             break
         if callback is not None:
