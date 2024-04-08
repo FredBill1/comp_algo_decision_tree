@@ -103,14 +103,17 @@ def on_data(
         if not node_holder.get_and_set_initialize_scheduled():
             executor.submit(node_holder.initialize, int(cmp_algorithm_i), int(input_N))
         if trigger_id == "expand_all":
-            ret.buffered_input__data = "expand_all"
+            ret.buffered_input__data = ["expand_all"]
         elif trigger_id == "show_statistics":
-            ret.buffered_input__data = "show_statistics"
+            ret.buffered_input__data = ["show_statistics"]
+        elif trigger_id == "cytoscape":
+            ret.buffered_input__data = ["cytoscape", int(node["data"]["id"])]
         else:
             ret.buffered_input__data = buffered_input
         ret.progress__animated = True
         ret.progress_interval__disabled = False
         ret.control_loading__style = {"visibility": "hidden"}
+        ret.visiblity_state__data = visiblity_state
         return ret.to_list()
     ret.show_statistics__disabled = False
     ret.expand_all__disabled = False
@@ -123,7 +126,9 @@ def on_data(
     node_holder.wait_until_initialized()
     ret.progress__label = to_displayable_int(node_holder.leaf_cnt)
     nodes = Nodes(node_holder, visiblity_state)
-    if trigger_id == "show_statistics" or buffered_input == "show_statistics":
+    if buffered_input is None:
+        buffered_input = [None]
+    if trigger_id == "show_statistics" or buffered_input[0] == "show_statistics":
         data = np.array(node_holder.operation_cnts, dtype=np.int32)
         ret.statistics_graph__figure = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
         ret.statistics_graph__figure.layout.update(showlegend=False)
@@ -142,9 +147,9 @@ def on_data(
                 "Average": f"{data.mean():.2f}",
             }
         ]
-    elif trigger_id == "cytoscape":
-        nodes.on_tap_node(int(node["data"]["id"]))
-    elif trigger_id == "expand_all" or buffered_input == "expand_all":
+    elif trigger_id == "cytoscape" or buffered_input[0] == "cytoscape":
+        nodes.on_tap_node(buffered_input[1] if buffered_input[0] == "cytoscape" else int(node["data"]["id"]))
+    elif trigger_id == "expand_all" or buffered_input[0] == "expand_all":
         if not nodes.expand_all():
             ret.notifications_container__children = dmc.Notification(
                 id="warning_notification",

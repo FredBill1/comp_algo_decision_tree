@@ -1,7 +1,7 @@
 import base64
 import traceback
 import zlib
-from collections import defaultdict, deque
+from collections import OrderedDict, deque
 from threading import Lock
 from typing import Optional
 
@@ -58,7 +58,7 @@ class NodeHolder:
 
 
 class Nodes:
-    cached: defaultdict[tuple[int, int], NodeHolder] = defaultdict(NodeHolder)
+    cached: OrderedDict[tuple[int, int], NodeHolder] = OrderedDict()
     cached_lock = Lock()
 
     def __init__(self, node_holder: NodeHolder, visiblity_state: Optional[str]) -> None:
@@ -71,8 +71,17 @@ class Nodes:
 
     @classmethod
     def get_node_holder(cls, cmp_algorithm_i: int, N: int) -> NodeHolder:
+        "the built-in `functools.lru_cache` would create multiple instances of NodeHolder for the same key when multithreading, so we use our own lru cache here"
+        key = (cmp_algorithm_i, N)
         with cls.cached_lock:
-            return cls.cached[(cmp_algorithm_i, N)]
+            if key in cls.cached:
+                cls.cached.move_to_end(key)
+                return next(reversed(cls.cached.values()))
+            if MAX_CACHED is not None and len(cls.cached) >= MAX_CACHED:
+                cls.cached.popitem(last=False)
+            ret = NodeHolder()
+            cls.cached[key] = ret
+            return ret
 
     def get_visiblity_state(self) -> str:
         return self.encode_visiblity(self.visiblity_state)
