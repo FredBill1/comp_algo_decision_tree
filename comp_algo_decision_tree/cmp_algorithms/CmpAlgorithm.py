@@ -11,7 +11,7 @@ def _sampler(N: int, r: Random) -> Generator[list[int], None, None]:
     arr = list(range(N))
     while True:
         r.shuffle(arr)
-        yield arr
+        yield list(arr)
 
 
 def _get_label(node: DecisionTreeNode[Sequence[int]], idx_use_letter: bool, crop_length: int) -> str:
