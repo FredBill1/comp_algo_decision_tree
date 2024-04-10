@@ -1,7 +1,7 @@
 atomics
 dash
 dash-bootstrap-components
-dash-cytoscape
+dash-cytoscape==0.3.0
 dash-iconify
 dash-mantine-components
 flask-executor

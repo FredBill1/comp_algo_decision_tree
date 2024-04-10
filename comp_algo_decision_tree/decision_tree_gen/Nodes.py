@@ -188,10 +188,8 @@ class Nodes:
                 classes.append("is_leaf")
             elif self.node_has_hidden_child(node):
                 classes.append("has_hidden_child")
-            if show_full_labels:
-                classes.append("full_label")
             label = self.node_holder.cmp_algorithm.get_label(node, self.node_holder.idx_use_letter, LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
-            node_data = {"data": {"id": str(node.id), ("full_label" if show_full_labels else "label"): label}, "classes": " ".join(classes)}
+            node_data = {"data": {"id": str(node.id), "label": label}, "classes": " ".join(classes)}
             ret.append(node_data)
             if node.parent is not None:
                 ret.append(node.edge_data(self.node_holder.idx_use_letter))
