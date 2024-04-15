@@ -42,7 +42,7 @@ def cmp_to_key(mycmp):
 # fmt: on
 
 
-def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int], int]:
+def decision_tree(cmp_algorithm: CmpAlgorithm, cnt: int, N: int, callback: Optional[Callable[[int, int], None]] = None) -> tuple[list[DecisionTreeNode], list[int], int]:
     nodes = [DecisionTreeNode()]
 
     def convert_idx_array(idx_array):
@@ -69,12 +69,14 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
         if do_sample:
             callback(0, MAX_SAMPLE_TIME_MS)
         else:
-            callback(0, TOTAL)
+            callback(0, cnt)
     operation_cnts = []
     start_time = time()
     leaf_cnt = 0
     r = Random(SAMPLE_SEED)
     for I, val_array in enumerate(cmp_algorithm.sampler(N, r) if do_sample else cmp_algorithm.generator(N)):
+        if I == cnt:
+            break
         idx_arrays = []
         cmp_xys = []
         idx_array = cmp_algorithm.map_enumerate(key, val_array)
@@ -127,7 +129,7 @@ def decision_tree(cmp_algorithm: CmpAlgorithm, N: int, callback: Optional[Callab
             if do_sample:
                 callback(cur_time, MAX_SAMPLE_TIME_MS)
             else:
-                callback(I + 1, TOTAL)
+                callback(I + 1, cnt)
     nodes.sort(key=lambda x: x.id)
     for i, node in enumerate(nodes):
         node.id = i

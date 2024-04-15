@@ -95,18 +95,21 @@ def on_data(
         )
 
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    if trigger_id in ("cmp_algorithm", "input_N", "reset"):
+    if trigger_id in ("cmp_algorithm", "input_N", "reset", "show_statistics"):
         visiblity_state = None
 
-    node_holder = Nodes.get_node_holder(int(cmp_algorithm_i), int(input_N))
+    cnt = 0 if not _show_statistics else int(_show_statistics)
+    print(_show_statistics, cnt)
+    print(cnt)
+    node_holder = Nodes.get_node_holder(int(cmp_algorithm_i), cnt, int(input_N))
     ret.progress__value, ret.progress__max = i, total = node_holder.get_progress()
     if i != total:
         ret.progress__label = f"{i}/{total}"
         if not node_holder.get_and_set_initialize_scheduled():
-            executor.submit(node_holder.initialize, int(cmp_algorithm_i), int(input_N))
+            executor.submit(node_holder.initialize, int(cmp_algorithm_i), cnt, int(input_N))
         if trigger_id == "expand_all":
             ret.buffered_input__data = ["expand_all"]
-        elif trigger_id == "show_statistics":
+        elif 0 and trigger_id == "show_statistics":
             ret.buffered_input__data = ["show_statistics"]
         elif trigger_id == "cytoscape":
             ret.buffered_input__data = ["cytoscape", int(node["data"]["id"])]
@@ -127,10 +130,11 @@ def on_data(
 
     node_holder.wait_until_initialized()
     ret.progress__label = to_displayable_int(node_holder.leaf_cnt)
-    nodes = Nodes(node_holder, visiblity_state, do_sample)
+    if cnt:
+        nodes = Nodes(node_holder, visiblity_state, do_sample)
     if buffered_input is None:
         buffered_input = [None]
-    if trigger_id == "show_statistics" or buffered_input[0] == "show_statistics":
+    if 0 and (trigger_id == "show_statistics" or buffered_input[0] == "show_statistics"):
         data = np.array(node_holder.operation_cnts, dtype=np.int32)
         ret.statistics_graph__figure = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
         ret.statistics_graph__figure.layout.update(showlegend=False)
@@ -161,8 +165,8 @@ def on_data(
                 icon=DashIconify(icon="material-symbols:warning"),
                 autoClose=10000,
             )
-    ret.visiblity_state__data = nodes.get_visiblity_state()
-    ret.cytoscape__elements = nodes.visible_elements(bool(show_full_labels))
+    ret.visiblity_state__data = nodes.get_visiblity_state() if cnt else None
+    ret.cytoscape__elements = nodes.visible_elements(bool(show_full_labels)) if cnt else []
     return ret.to_list()
 
 
@@ -237,7 +241,7 @@ control_panel = html.Div(
         ),
         dbc.Progress(id="progress", value=0, striped=True, animated=True, style={"width": "10rem", "height": "1.3rem"}),
         dcc.Interval(id="progress_interval", interval=300, n_intervals=0, disabled=True),
-        dbc.Button("Show Statistics", id="show_statistics", disabled=True),
+        dbc.Button("Next Step", id="show_statistics", disabled=True),
         dbc.Checklist(  # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
             options=[{"label": "Show Full Labels", "value": 0}],
             id="show_full_labels",

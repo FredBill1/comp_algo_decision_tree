@@ -33,12 +33,12 @@ class NodeHolder:
     def set_progress(self, i: int, total: int):
         self.progress.store((i << 32) | total, atomics.MemoryOrder.RELAXED)
 
-    def initialize(self, cmp_algorithm_i: int, N: int) -> None:
+    def initialize(self, cmp_algorithm_i: int, cnt: int, N: int) -> None:
         with self.lock:
             self.cmp_algorithm = cmp_algorithms[cmp_algorithm_i]
             self.idx_use_letter = self.cmp_algorithm.idx_use_letter(N)
             print(f"init: `{self.cmp_algorithm.name}` with {N} elements")
-            self._initialize(self.cmp_algorithm, N)
+            self._initialize(self.cmp_algorithm, cnt, N)
             print(f"fin:  `{self.cmp_algorithm.name}` with {N} elements")
             self.initialized_flag.store(b"\x01", atomics.MemoryOrder.RELEASE)
 
@@ -48,9 +48,9 @@ class NodeHolder:
         with self.lock:
             pass
 
-    def _initialize(self, cmp_algorithm: CmpAlgorithm, N: int) -> None:
+    def _initialize(self, cmp_algorithm: CmpAlgorithm, cnt: int, N: int) -> None:
         try:
-            self.nodes, self.operation_cnts, self.leaf_cnt = decision_tree(cmp_algorithm, N, self.set_progress)
+            self.nodes, self.operation_cnts, self.leaf_cnt = decision_tree(cmp_algorithm, cnt, N, self.set_progress)
         except Exception as e:
             traceback.print_exc()
             self.initialize_scheduled.store(b"\x00", atomics.MemoryOrder.RELEASE)
@@ -85,9 +85,9 @@ class Nodes:
         return np.array(valid, dtype=np.int32)
 
     @classmethod
-    def get_node_holder(cls, cmp_algorithm_i: int, N: int) -> NodeHolder:
+    def get_node_holder(cls, cmp_algorithm_i: int, cnt: int, N: int) -> NodeHolder:
         "the built-in `functools.lru_cache` would create multiple instances of NodeHolder for the same key when multithreading, so we use our own lru cache here"
-        key = (cmp_algorithm_i, N)
+        key = (cmp_algorithm_i, cnt, N)
         with cls.cached_lock:
             if key in cls.cached:
                 cls.cached.move_to_end(key)
