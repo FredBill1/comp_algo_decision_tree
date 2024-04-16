@@ -132,7 +132,9 @@ def on_data(
         buffered_input = [None]
     if trigger_id == "show_statistics" or buffered_input[0] == "show_statistics":
         data = np.array(node_holder.operation_cnts, dtype=np.int32)
-        ret.statistics_graph__figure = px.histogram(x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True)
+        ret.statistics_graph__figure = px.histogram(
+            x=data, title="Operation Count Distribution", labels={"x": "Operation Count"}, color=data, text_auto=True
+        )
         ret.statistics_graph__figure.layout.update(showlegend=False)
         ret.statistics_modal__is_open = True
         input_total = cmp_algorithm.input_total(int(input_N))
@@ -236,7 +238,7 @@ control_panel = html.Div(
             style={"column-gap": "0", "display": "flex", "align-items": "center", "padding": "0.5rem"},
         ),
         dbc.Progress(id="progress", value=0, striped=True, animated=True, style={"width": "10rem", "height": "1.3rem"}),
-        dcc.Interval(id="progress_interval", interval=300, n_intervals=0, disabled=True),
+        dcc.Interval(id="progress_interval", interval=PROGRESS_INTERVAL_MS, n_intervals=0, disabled=True),
         dbc.Button("Show Statistics", id="show_statistics", disabled=True),
         dbc.Checklist(  # don't know why dbc.Switch cannot align center vertically, so use dbc.Checklist instead
             options=[{"label": "Show Full Labels", "value": 0}],
@@ -310,7 +312,16 @@ app = Dash(
 )
 app.layout = dmc.NotificationsProvider(
     html.Div(
-        [html.Div(id="notifications_container"), control_panel, cytoscape, code_modal, statistics_modal, visiblity_state, buffered_input, last_tree_param],
+        [
+            html.Div(id="notifications_container"),
+            control_panel,
+            cytoscape,
+            code_modal,
+            statistics_modal,
+            visiblity_state,
+            buffered_input,
+            last_tree_param,
+        ],
         style={
             "position": "absolute",
             "top": "0",
