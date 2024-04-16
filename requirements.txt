@@ -1,8 +1,8 @@
-atomics
+atomics==1.0.2
 dash
-dash-bootstrap-components
+dash-bootstrap-components==1.6.0
 dash-cytoscape==0.3.0
-dash-iconify
+dash-iconify==0.1.2
 dash-mantine-components==0.12.1
 flask-executor
 numpy
