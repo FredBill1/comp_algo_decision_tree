@@ -3,7 +3,7 @@ dash
 dash-bootstrap-components
 dash-cytoscape==0.3.0
 dash-iconify
-dash-mantine-components
+dash-mantine-components==0.12.1
 flask-executor
 numpy
 pandas
