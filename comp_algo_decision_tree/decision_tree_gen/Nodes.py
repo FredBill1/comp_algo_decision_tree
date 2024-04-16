@@ -1,4 +1,5 @@
 import base64
+import time
 import traceback
 import zlib
 from collections import OrderedDict, deque
@@ -30,8 +31,13 @@ class NodeHolder:
         x = self.progress.load(atomics.MemoryOrder.RELAXED)
         return x >> 32, x & 0xFFFFFFFF
 
-    def set_progress(self, i: int, total: int):
+    def set_progress(self, i: int, total: int) -> None:
         self.progress.store((i << 32) | total, atomics.MemoryOrder.RELAXED)
+
+    def set_progress_and_yield(self, i: int, total: int) -> None:
+        "yield current thread to avoid blocking http requests"
+        self.set_progress(i, total)
+        time.sleep(0)
 
     def initialize(self, cmp_algorithm_i: int, N: int) -> None:
         with self.lock:
@@ -50,7 +56,7 @@ class NodeHolder:
 
     def _initialize(self, cmp_algorithm: CmpAlgorithm, N: int) -> None:
         try:
-            self.nodes, self.operation_cnts, self.leaf_cnt = decision_tree(cmp_algorithm, N, self.set_progress)
+            self.nodes, self.operation_cnts, self.leaf_cnt = decision_tree(cmp_algorithm, N, self.set_progress_and_yield)
         except Exception as e:
             traceback.print_exc()
             self.initialize_scheduled.store(b"\x00", atomics.MemoryOrder.RELEASE)
@@ -188,7 +194,9 @@ class Nodes:
                 classes.append("is_leaf")
             elif self.node_has_hidden_child(node):
                 classes.append("has_hidden_child")
-            label = self.node_holder.cmp_algorithm.get_label(node, self.node_holder.idx_use_letter, LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH)
+            label = self.node_holder.cmp_algorithm.get_label(
+                node, self.node_holder.idx_use_letter, LABEL_MAX_LENGTH if show_full_labels else LABEL_CROP_LENGTH
+            )
             node_data = {"data": {"id": str(node.id), "label": label}, "classes": " ".join(classes)}
             ret.append(node_data)
             if node.parent is not None:
