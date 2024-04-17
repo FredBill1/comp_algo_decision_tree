@@ -1,14 +1,16 @@
 # comp_algo_decision_tree
 
-Decision Trees for Comparison-based Algorithms
+Decision tree visualization tool for comparison-based algorithms.
 
 ## Setup Environment
 
-Created with python 3.11
+Requires `python>=3.11`.
 
 ```bash
 pip install -r requirements.txt
 ```
+
+> Note that `atomics==1.0.2` does not ship with the correct binary for Apple arm64 chips (M1, M2, etc., as per [this issue](https://github.com/doodspav/atomics/issues/5#issue-1592191416)). You may need to build the library from source manually, as documented [here](https://github.com/doodspav/atomics/blob/v1.0.2/README.md#building).
 
 ## Run
 
